@@ -3,7 +3,7 @@ import { Command } from "commander";
 import { existsSync, writeFileSync } from "node:fs";
 import ora from "ora";
 import { analyzeContent, AnalysisResult } from "./analyzer.js";
-import { createClient } from "./llm.js";
+import { createProvider } from "./providers/base.js";
 import { loadConfig, saveConfig, configPathDisplay } from "./config.js";
 import { printError, printInfo, printResult } from "./printer.js";
 import { transcribeAudio } from "./transcribe.js";
@@ -16,22 +16,43 @@ program
   .description("LAOZI.CLI — 帮助家庭识别针对老人的网络虚假信息")
   .version("0.1.0");
 
+async function getProvider() {
+  const config = loadConfig();
+  const provider = createProvider({
+    provider: config.provider,
+    baseURL: config.baseURL,
+    apiKey: config.apiKey,
+    model: config.model,
+  });
+
+  if (provider.healthCheck) {
+    const ok = await provider.healthCheck();
+    if (!ok) {
+      printError(
+        `${provider.name} 服务未运行或无法连接。\n` +
+          (config.provider === "ollama"
+            ? "请确保 Ollama 已安装并运行: https://ollama.com"
+            : config.provider === "llama-cpp"
+            ? "请确保 llama.cpp server 已启动在 " + config.baseURL
+            : "请检查网络连接和 API 配置。")
+      );
+      process.exit(1);
+    }
+  }
+
+  return { provider, config };
+}
+
 program
   .command("check <text>")
   .description("分析一段文字内容的真实性")
   .option("-l, --lang <lang>", "输出语言: zh | en | bilingual", "bilingual")
   .action(async (text: string, options: { lang: string }) => {
-    const config = loadConfig();
-    if (!config.apiKey) {
-      printError(`请先设置 API Key: laozi config --api-key <your-key>`);
-      process.exit(1);
-    }
-
-    const client = createClient(config);
+    const { provider, config } = await getProvider();
     const spinner = ora("正在分析内容...").start();
 
     try {
-      const result = await analyzeContent(client, config, text);
+      const result = await analyzeContent(provider, config, text);
       spinner.stop();
       printResult(result as AnalysisResult, options.lang || config.language);
       saveHistoryEntry({
@@ -53,21 +74,30 @@ program
   .description("将语音文件转文字后分析其真实性")
   .option("-l, --lang <lang>", "输出语言: zh | en | bilingual", "bilingual")
   .action(async (filepath: string, options: { lang: string }) => {
-    const config = loadConfig();
-    if (!config.apiKey) {
-      printError(`请先设置 API Key: laozi config --api-key <your-key>`);
-      process.exit(1);
-    }
+    const { provider, config } = await getProvider();
     if (!existsSync(filepath)) {
       printError(`文件不存在: ${filepath}`);
       process.exit(1);
     }
 
-    const client = createClient(config);
+    // Whisper currently requires OpenAI-compatible API
+    if (config.provider !== "openai" && !config.apiKey) {
+      printError(
+        `当前 provider (${config.provider}) 不支持语音转录。\n` +
+          `语音功能需要 OpenAI 兼容 API。您可以：\n` +
+          `1. 手动将语音转为文字后使用 "laozi check <文字>"\n` +
+          `2. 或配置 openai provider 用于语音转录：\n` +
+          `   laozi config --provider openai --api-key <key>`
+      );
+      process.exit(1);
+    }
 
     let spinner = ora("正在转录语音...").start();
     let transcript: string;
     try {
+      // For transcribe we still use the OpenAI SDK path for now
+      const { createClient } = await import("./llm.js");
+      const client = createClient(config);
       transcript = await transcribeAudio(client, config, filepath);
       spinner.stop();
       printInfo(`语音转文字结果: ${transcript}`);
@@ -79,7 +109,7 @@ program
 
     spinner = ora("正在分析内容...").start();
     try {
-      const result = await analyzeContent(client, config, transcript);
+      const result = await analyzeContent(provider, config, transcript);
       spinner.stop();
       printResult(result as AnalysisResult, options.lang || config.language);
       saveHistoryEntry({
@@ -99,13 +129,15 @@ program
 program
   .command("config")
   .description("配置 CLI 参数")
-  .option("--api-key <key>", "设置 OpenAI 兼容 API Key")
+  .option("--provider <name>", "模型提供者: ollama | llama-cpp | openai")
+  .option("--api-key <key>", "设置 API Key")
   .option("--base-url <url>", "设置 API Base URL")
   .option("--model <model>", "设置分析用模型")
   .option("--whisper-model <model>", "设置语音转文字模型")
   .option("--language <lang>", "默认输出语言: zh | en | bilingual")
   .action((options) => {
     const updates: any = {};
+    if (options.provider !== undefined) updates.provider = options.provider;
     if (options.apiKey !== undefined) updates.apiKey = options.apiKey;
     if (options.baseUrl !== undefined) updates.baseURL = options.baseUrl;
     if (options.model !== undefined) updates.model = options.model;

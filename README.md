@@ -11,13 +11,13 @@ Elderly people are often the primary targets of health misinformation, phishing 
 LAOZI.CLI bridges that gap. Paste (or voice-transcribe) the suspicious content, and get:
 
 - A **credibility score** and verdict
-- **Specific red flags** identified by an LLM
+- **Specific red flags** identified by an LLM or local rule engine
 - A **warm, plain-language explanation** you can copy-paste directly into the family chat
 - **Bilingual output** (Chinese + English) for multi-generational or overseas families
 
 ## Install
 
-### One-line install (recommended)
+### One-line install
 
 ```bash
 curl -fsSL https://laozi.art/install.sh | bash
@@ -33,25 +33,45 @@ npm run build
 npm link
 ```
 
-## Configure
+## Quick Start (Zero Config)
 
-LAOZI.CLI uses any **OpenAI-compatible API**. Popular choices:
-
-- OpenAI
-- DeepSeek
-- Moonshot (Kimi)
-- Qwen
-- Self-hosted models (vLLM, llama.cpp server, etc.)
+LAOZI.CLI works **out of the box** with a built-in local rule engine. No API key, no model download, no internet required for text analysis.
 
 ```bash
-laozi config --api-key <YOUR_KEY> --base-url https://api.deepseek.com/v1 --model deepseek-chat
+laozi check "专家说每天喝醋能软化血管，群里都在转发"
 ```
 
-View current config:
+## Upgrade to AI Analysis
+
+The rule engine catches common hoaxes instantly, but for unknown or complex content, you can upgrade to a local or remote AI model:
+
+### Option 1: Local Ollama (Free, Private)
+
+1. Install [Ollama](https://ollama.com)
+2. Pull a Chinese-capable model (recommended: **Qwen2.5 7B**):
+   ```bash
+   ollama pull qwen2.5:7b
+   ```
+3. Configure LAOZI.CLI:
+   ```bash
+   laozi config --provider ollama --model qwen2.5:7b
+   ```
+
+### Option 2: Local llama.cpp server (Free, Private)
+
+1. Start [llama.cpp server](https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md) with your GGUF model
+2. Configure:
+   ```bash
+   laozi config --provider llama-cpp --base-url http://localhost:8080 --model local
+   ```
+
+### Option 3: OpenAI-compatible API
 
 ```bash
-laozi config
+laozi config --provider openai --api-key <YOUR_KEY> --base-url https://api.openai.com/v1 --model gpt-4o-mini
 ```
+
+Other compatible services: DeepSeek, Moonshot (Kimi), Qwen, etc.
 
 ## Usage
 
@@ -63,11 +83,11 @@ laozi check "专家说每天喝醋能软化血管，群里都在转发"
 
 ### Analyze a voice message
 
+> Note: Voice transcription currently requires an OpenAI-compatible API (local Whisper support is planned).
+
 ```bash
 laozi voice ~/Downloads/grandma_voice.m4a
 ```
-
-The voice file is first transcribed to text (via Whisper API), then analyzed.
 
 ### Change output language
 
@@ -94,53 +114,62 @@ laozi export ~/Desktop/report.md
 ## Example Output
 
 ```text
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   可信度分析 / Credibility Analysis
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  🔴 可信度 / Score: 23/100 [虚假信息 / Misinformation]
+  🔴 可信度 / Score: 15/100 [虚假信息 / Misinformation]
 
   主要疑点 / Red Flags:
-    1. "专家说" — 未提供具体姓名和机构，典型的权威嫁接
-       "Expert says" without naming anyone — classic appeal to false authority
-    2. "软化血管" — 医学上不存在这个概念，动脉硬化不可逆
-       "Softens blood vessels" is not a real medical concept; atherosclerosis is irreversible
-    3. "群里都在转发" — 从众效应，与事实真伪无关
-       "Everyone is forwarding it" — bandwagon fallacy, unrelated to truth
+    1. "软化血管"不是医学概念，动脉粥样硬化不可逆
+       "Softening blood vessels" is not a medical concept
+    2. 未提供具体姓名、机构和文献来源，属于典型的'权威嫁接'
+       No specific name or source — classic false authority appeal
+    3. 利用从众心理和道德绑架，与内容真实性无关
+       Exploits bandwagon psychology, unrelated to truth
 
   给老人的一句话 / For the Elder:
-  奶奶，血管变硬就像水管老化，喝醋洗不干净，喝多了反而伤胃。医院大夫没这么说过。
-  Grandma, hardened blood vessels are like aging pipes; vinegar won't clean them, and too much can hurt your stomach. Doctors don't say this.
+  血管变硬就像水管老化，喝醋洗不干净，喝多了反而伤胃。医院大夫没这么说过。
+  Hardened blood vessels are like aging pipes; vinegar won't clean them, and too much can hurt your stomach.
 
   建议操作 / Suggested Action:
-  提醒老人不要购买相关保健品，必要时带去医院咨询医生。
-  Remind the elder not to buy related health products. Take them to a doctor if needed.
+  提醒老人不要相信此类养生偏方，如有血管问题应去医院就诊。
+  Remind the elder not to believe such folk remedies. Go to the hospital for real issues.
 
   总结 / Summary:
-  这是一条典型的健康养生谣言，利用老年人对健康的焦虑进行传播，内容没有科学依据。
+  典型的健康养生谣言，利用老年人对心血管疾病的恐惧进行传播，没有科学依据。
   A typical health hoax exploiting elderly anxiety, with no scientific basis.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
 ## Architecture
 
+Inspired by [OpenCode](https://opencode.ai) and [BettaFish](https://github.com/Dorenbos/xnvs) — minimal, pluggable, local-first.
+
 ```
 laozi-cli
-├── src/cli.ts           # Commander entrypoint
-├── src/config.ts        # ~/.laozi/config.json management
-├── src/history.ts       # ~/.laozi/history.json persistence
-├── src/llm.ts           # OpenAI-compatible chat client
-├── src/transcribe.ts    # Whisper transcription
-├── src/analyzer.ts      # Prompt engineering + JSON parsing
-└── src/printer.ts       # Terminal formatting with Chalk
+├── src/
+│   ├── cli.ts              # Commander entrypoint
+│   ├── config.ts           # ~/.laozi/config.json
+│   ├── history.ts          # ~/.laozi/history.json persistence
+│   ├── analyzer.ts         # Prompt engineering + JSON parsing
+│   ├── printer.ts          # Terminal formatting with Chalk
+│   ├── llm.ts              # OpenAI client for voice/API mode
+│   ├── transcribe.ts       # Whisper transcription
+│   └── providers/
+│       ├── base.ts         # Provider interface + factory
+│       ├── rule-based.ts   # Zero-config local rule engine
+│       ├── ollama.ts       # Ollama local LLM
+│       ├── llama-cpp.ts    # llama.cpp server
+│       └── openai.ts       # OpenAI-compatible API
 ```
 
 Core design principles:
-- **No heavy local models**. All intelligence is delegated to a remote LLM.
-- **Minimal dependencies**. Fast install, small footprint.
+- **Local-first**. Rule engine works offline instantly.
+- **Pluggable providers**. Swap from rules → local LLM → API without changing commands.
 - **Bilingual-first**. Output designed for copy-paste into family chats.
-- **History & export**. Every analysis is saved and can be exported to Markdown.
+- **History & export**. Every analysis is saved and exportable to Markdown.
 
 ## License
 

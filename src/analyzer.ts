@@ -1,9 +1,8 @@
-import OpenAI from "openai";
-import { chatCompletion } from "./llm.js";
+import { Provider } from "./providers/base.js";
 import { Config } from "./config.js";
 
 export interface AnalysisResult {
-  credibilityScore: number; // 0-100
+  credibilityScore: number;
   verdict: "safe" | "suspicious" | "misinformation" | "scam";
   redFlags: { zh: string; en: string }[];
   elderExplanation: { zh: string; en: string };
@@ -39,14 +38,52 @@ Guidelines:
 - redFlags should identify specific manipulation tactics (e.g. fake experts, emotional blackmail, pseudo-science, urgency, "everyone is doing it").
 - elderExplanation must be suitable to copy-paste into a family chat. Use simple vocabulary. Avoid medical or legal jargon unless you explain it.
 - If the content is safe, still give a brief reassuring summary.
-`;
+
+Output ONLY the JSON. No markdown code blocks, no extra text before or after.`;
+
+function extractJson(raw: string): string {
+  // Try direct parse first
+  const trimmed = raw.trim();
+  if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+    return trimmed;
+  }
+  // Try extracting from markdown code block
+  const codeBlockMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (codeBlockMatch) {
+    const inner = codeBlockMatch[1].trim();
+    if (inner.startsWith("{")) return inner;
+  }
+  // Try finding first { and last }
+  const start = trimmed.indexOf("{");
+  const end = trimmed.lastIndexOf("}");
+  if (start !== -1 && end !== -1 && end > start) {
+    return trimmed.slice(start, end + 1);
+  }
+  throw new Error("No JSON object found in response");
+}
+
+function normalizeResult(parsed: any): AnalysisResult {
+  const score = typeof parsed.credibilityScore === "number" ? parsed.credibilityScore : 50;
+  const verdict = ["safe", "suspicious", "misinformation", "scam"].includes(parsed.verdict)
+    ? parsed.verdict
+    : "suspicious";
+
+  return {
+    credibilityScore: Math.max(0, Math.min(100, Math.round(score))),
+    verdict,
+    redFlags: Array.isArray(parsed.redFlags) ? parsed.redFlags : [],
+    elderExplanation: parsed.elderExplanation || { zh: "请谨慎对待该内容。", en: "Please treat this content with caution." },
+    actionSuggestion: parsed.actionSuggestion || { zh: "与家人讨论后再做决定。", en: "Discuss with family before acting." },
+    summary: parsed.summary || { zh: "无法生成总结。", en: "Unable to generate summary." },
+  };
+}
 
 export async function analyzeContent(
-  client: OpenAI,
+  provider: Provider,
   config: Config,
   content: string
 ): Promise<AnalysisResult> {
-  const res = await chatCompletion(client, config.model, [
+  const raw = await provider.chat([
     { role: "system", content: systemPrompt },
     {
       role: "user",
@@ -55,14 +92,11 @@ export async function analyzeContent(
   ]);
 
   try {
-    const parsed = JSON.parse(res) as AnalysisResult;
-    // Normalize score
-    if (typeof parsed.credibilityScore !== "number") {
-      parsed.credibilityScore = 50;
-    }
-    parsed.credibilityScore = Math.max(0, Math.min(100, Math.round(parsed.credibilityScore)));
-    return parsed;
-  } catch (e) {
-    throw new Error("Failed to parse LLM response as JSON.\n" + res);
+    const jsonStr = extractJson(raw);
+    const parsed = JSON.parse(jsonStr);
+    return normalizeResult(parsed);
+  } catch (e: any) {
+    // Fallback: if JSON parse fails, try to use regex extraction as a last resort
+    throw new Error("Failed to parse model response as JSON.\nRaw response:\n" + raw);
   }
 }

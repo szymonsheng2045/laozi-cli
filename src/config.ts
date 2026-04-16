@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 
 export interface Config {
+  provider: "rule-based" | "ollama" | "llama-cpp" | "openai";
   apiKey: string;
   baseURL: string;
   model: string;
@@ -14,9 +15,10 @@ const configDir = join(homedir(), ".laozi");
 const configPath = join(configDir, "config.json");
 
 export const defaultConfig: Config = {
+  provider: "rule-based",
   apiKey: "",
-  baseURL: "https://api.openai.com/v1",
-  model: "gpt-4o-mini",
+  baseURL: "",
+  model: "local-rules",
   whisperModel: "whisper-1",
   language: "bilingual",
 };
