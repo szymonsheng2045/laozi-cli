@@ -3,12 +3,15 @@ import { Command } from "commander";
 import { existsSync, writeFileSync } from "node:fs";
 import ora from "ora";
 import { analyzeContent, AnalysisResult } from "./analyzer.js";
-import { createProvider } from "./providers/base.js";
+import { createProvider, Provider } from "./providers/base.js";
+import { listProviders } from "./providers/registry.js";
 import { loadConfig, saveConfig, configPathDisplay } from "./config.js";
 import { printError, printInfo, printResult } from "./printer.js";
 import { transcribeAudio } from "./transcribe.js";
 import { clearHistory, formatHistoryPreview, loadHistory, saveHistoryEntry } from "./history.js";
 import { printBanner } from "./banner.js";
+import { resolveProvider } from "./resolve-provider.js";
+import { ensemble, runSingleJudge } from "./judge.js";
 
 const program = new Command();
 
@@ -18,12 +21,11 @@ program
   .version("0.1.0");
 
 async function getProvider() {
-  const config = loadConfig();
+  const resolved = resolveProvider();
   const provider = createProvider({
-    provider: config.provider,
-    baseURL: config.baseURL,
-    apiKey: config.apiKey,
-    model: config.model,
+    provider: resolved.meta.id,
+    apiKey: resolved.apiKey,
+    model: resolved.model,
   });
 
   if (provider.healthCheck) {
@@ -31,25 +33,80 @@ async function getProvider() {
     if (!ok) {
       printError(
         `${provider.name} 服务未运行或无法连接。\n` +
-          (config.provider === "ollama"
+          (resolved.meta.id === "ollama"
             ? "请确保 Ollama 已安装并运行: https://ollama.com"
-            : config.provider === "llama-cpp"
-            ? "请确保 llama.cpp server 已启动在 " + config.baseURL
+            : resolved.meta.id === "llama-cpp"
+            ? "请确保 llama.cpp server 已启动在 " + resolved.meta.baseURL
             : "请检查网络连接和 API 配置。")
       );
       process.exit(1);
     }
   }
 
-  return { provider, config };
+  const config = loadConfig();
+  return { provider, config, resolved };
 }
 
 program
   .command("check <text>")
   .description("分析一段文字内容的真实性")
   .option("-l, --lang <lang>", "输出语言: zh | en | bilingual", "bilingual")
-  .action(async (text: string, options: { lang: string }) => {
-    const { provider, config } = await getProvider();
+  .option("--panel", "启用多模型委员会并行分析")
+  .action(async (text: string, options: { lang: string; panel?: boolean }) => {
+    const config = loadConfig();
+    const usePanel = options.panel || config.judgePanel.length > 0;
+
+    if (usePanel) {
+      const panelIds = config.judgePanel.length > 0 ? config.judgePanel : [config.provider];
+      if (panelIds.length === 0 || (panelIds.length === 1 && panelIds[0] === "rule-based")) {
+        printError(
+          "多模型委员会模式需要配置至少一个 API provider。\n" +
+            "示例: laozi config --judge-panel qwen,kimi,zhipu,minimax"
+        );
+        process.exit(1);
+      }
+
+      const spinner = ora(`正在启动 ${panelIds.length} 模型委员会分析...`).start();
+      try {
+        const providers: Provider[] = [];
+        for (const id of panelIds) {
+          const resolved = resolveProvider(id);
+          providers.push(createProvider({ provider: resolved.meta.id, apiKey: resolved.apiKey, model: resolved.model }));
+        }
+
+        const votes = await Promise.all(
+          providers.map((p) => runSingleJudge(p, text).catch((e) => {
+            return { provider: p.name, error: e.message || String(e) } as any;
+          }))
+        );
+
+        const validVotes = votes.filter((v) => !v.error);
+        if (validVotes.length === 0) {
+          spinner.stop();
+          printError("所有模型分析均失败。\n" + votes.map((v) => `${v.provider}: ${v.error}`).join("\n"));
+          process.exit(1);
+        }
+
+        const result = ensemble(validVotes);
+        spinner.stop();
+        printResult(result, options.lang || config.language);
+        saveHistoryEntry({
+          id: Math.random().toString(36).slice(2),
+          timestamp: new Date().toISOString(),
+          inputType: "text",
+          inputPreview: text,
+          result,
+        });
+      } catch (err: any) {
+        spinner.stop();
+        printError(err.message || String(err));
+        process.exit(1);
+      }
+      return;
+    }
+
+    // Single-provider / rule-based mode
+    const { provider } = await getProvider();
     const spinner = ora("正在分析内容...").start();
 
     try {
@@ -81,14 +138,14 @@ program
       process.exit(1);
     }
 
-    // Whisper currently requires OpenAI-compatible API
-    if (config.provider !== "openai" && !config.apiKey) {
+    // Whisper currently requires OpenAI-compatible API key
+    if (!config.apiKey) {
       printError(
-        `当前 provider (${config.provider}) 不支持语音转录。\n` +
-          `语音功能需要 OpenAI 兼容 API。您可以：\n` +
+        `语音转录需要配置 OpenAI 兼容 API Key。\n` +
+          `您可以：\n` +
           `1. 手动将语音转为文字后使用 "laozi check <文字>"\n` +
-          `2. 或配置 openai provider 用于语音转录：\n` +
-          `   laozi config --provider openai --api-key <key>`
+          `2. 或配置 API key 用于语音转录：\n` +
+          `   laozi config --provider qwen --api-key <key>`
       );
       process.exit(1);
     }
@@ -96,7 +153,6 @@ program
     let spinner = ora("正在转录语音...").start();
     let transcript: string;
     try {
-      // For transcribe we still use the OpenAI SDK path for now
       const { createClient } = await import("./llm.js");
       const client = createClient(config);
       transcript = await transcribeAudio(client, config, filepath);
@@ -130,12 +186,13 @@ program
 program
   .command("config")
   .description("配置 CLI 参数")
-  .option("--provider <name>", "模型提供者: ollama | llama-cpp | openai")
+  .option("--provider <name>", "模型提供者: rule-based, qwen, kimi, deepseek, zhipu, minimax, openai, anthropic, gemini, ollama, llama-cpp")
   .option("--api-key <key>", "设置 API Key")
   .option("--base-url <url>", "设置 API Base URL")
   .option("--model <model>", "设置分析用模型")
   .option("--whisper-model <model>", "设置语音转文字模型")
   .option("--language <lang>", "默认输出语言: zh | en | bilingual")
+  .option("--judge-panel <list>", "多模型委员会，逗号分隔，如 qwen,kimi,zhipu,minimax")
   .action((options) => {
     const updates: any = {};
     if (options.provider !== undefined) updates.provider = options.provider;
@@ -144,6 +201,12 @@ program
     if (options.model !== undefined) updates.model = options.model;
     if (options.whisperModel !== undefined) updates.whisperModel = options.whisperModel;
     if (options.language !== undefined) updates.language = options.language;
+    if (options.judgePanel !== undefined) {
+      updates.judgePanel = options.judgePanel
+        .split(",")
+        .map((s: string) => s.trim())
+        .filter(Boolean);
+    }
 
     if (Object.keys(updates).length === 0) {
       printInfo(`当前配置文件: ${configPathDisplay()}`);
@@ -153,6 +216,28 @@ program
 
     saveConfig(updates);
     printInfo(`配置已保存到: ${configPathDisplay()}`);
+  });
+
+program
+  .command("models")
+  .description("列出所有支持的模型提供商")
+  .action(() => {
+    const cn = listProviders().filter((p) => p.region === "cn");
+    const global_ = listProviders().filter((p) => p.region === "global");
+
+    console.log(`\n${" ".repeat(4)}中国大陆模型 / China Mainland`);
+    cn.forEach((p) => {
+      console.log(`  ${p.id.padEnd(12)} ${p.name.padEnd(18)} 默认: ${p.defaultModel}`);
+    });
+
+    console.log(`\n${" ".repeat(4)}国际模型 / Global`);
+    global_.forEach((p) => {
+      console.log(`  ${p.id.padEnd(12)} ${p.name.padEnd(18)} 默认: ${p.defaultModel}`);
+    });
+
+    console.log(`\n  ${" ".repeat(4)}离线引擎 / Offline`);
+    console.log(`  ${"rule-based".padEnd(12)} 本地规则引擎 (零配置，无需网络)`);
+    console.log("");
   });
 
 program

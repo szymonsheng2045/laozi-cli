@@ -1,0 +1,66 @@
+import { loadConfig } from "./config.js";
+import { getProviderMeta, ProviderMeta } from "./providers/registry.js";
+
+export interface ResolvedProvider {
+  meta: ProviderMeta;
+  apiKey: string;
+  model: string;
+}
+
+export function resolveProvider(
+  providerId?: string,
+  apiKey?: string,
+  model?: string
+): ResolvedProvider {
+  const config = loadConfig();
+  const finalProviderId = providerId || config.provider;
+
+  // Special case: rule-based provider
+  if (finalProviderId === "rule-based") {
+    return {
+      meta: {
+        id: "rule-based",
+        name: "本地规则引擎",
+        type: "local",
+        baseURL: "",
+        defaultModel: "local-rules",
+        envKey: "",
+        region: "global",
+      },
+      apiKey: "",
+      model: model || config.model || "local-rules",
+    };
+  }
+
+  const meta = getProviderMeta(finalProviderId);
+
+  if (!meta) {
+    throw new Error(`Unknown provider: ${finalProviderId}`);
+  }
+
+  // Priority: explicit arg > config file > env var
+  let finalKey = apiKey || config.apiKey || "";
+  if (!finalKey && meta.envKey) {
+    finalKey = process.env[meta.envKey] || "";
+  }
+
+  // Local models don't require API keys
+  if (meta.type !== "local" && !finalKey) {
+    const sources = meta.envKey
+      ? `config file or environment variable ${meta.envKey}`
+      : "config file";
+    throw new Error(
+      `Provider "${meta.name}" requires an API key.\n` +
+        `Please configure it via: laozi config --provider ${meta.id} --api-key <key>\n` +
+        `Or set the ${sources}.`
+    );
+  }
+
+  const finalModel = model || config.model || meta.defaultModel;
+
+  return {
+    meta,
+    apiKey: finalKey,
+    model: finalModel,
+  };
+}

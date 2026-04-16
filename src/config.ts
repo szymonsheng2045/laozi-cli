@@ -2,13 +2,27 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
+export type ProviderId =
+  | "rule-based"
+  | "qwen"
+  | "kimi"
+  | "deepseek"
+  | "zhipu"
+  | "minimax"
+  | "openai"
+  | "anthropic"
+  | "gemini"
+  | "ollama"
+  | "llama-cpp";
+
 export interface Config {
-  provider: "rule-based" | "ollama" | "llama-cpp" | "openai";
+  provider: ProviderId;
   apiKey: string;
   baseURL: string;
   model: string;
   whisperModel: string;
   language: "zh" | "en" | "bilingual";
+  judgePanel: string[];
 }
 
 const configDir = join(homedir(), ".laozi");
@@ -21,6 +35,7 @@ export const defaultConfig: Config = {
   model: "local-rules",
   whisperModel: "whisper-1",
   language: "bilingual",
+  judgePanel: [],
 };
 
 export function loadConfig(): Config {
