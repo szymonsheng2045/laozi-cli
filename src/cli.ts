@@ -8,6 +8,7 @@ import { loadConfig, saveConfig, configPathDisplay } from "./config.js";
 import { printError, printInfo, printResult } from "./printer.js";
 import { transcribeAudio } from "./transcribe.js";
 import { clearHistory, formatHistoryPreview, loadHistory, saveHistoryEntry } from "./history.js";
+import { printBanner } from "./banner.js";
 
 const program = new Command();
 
@@ -224,5 +225,10 @@ ${r.summary.en}
     writeFileSync(filepath, md, "utf-8");
     printInfo(`报告已导出: ${filepath}`);
   });
+
+// 默认行为：无参数时显示 banner
+program.action(() => {
+  printBanner();
+});
 
 program.parse();
