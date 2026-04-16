@@ -1,5 +1,6 @@
-import { Provider, ChatMessage } from "./providers/base.js";
-import { AnalysisResult } from "./analyzer.js";
+import { Provider } from "./providers/base.js";
+import { loadPrompt } from "./prompts.js";
+import { Extraction } from "./extractor.js";
 
 export interface JudgeVote {
   provider: string;
@@ -11,40 +12,13 @@ export interface JudgeVote {
   summary: { zh: string; en: string };
 }
 
-function buildSystemPrompt(includeSearch: boolean): string {
-  const base = `You are one member of a digital-safety panel helping families identify misinformation targeting elderly internet users.
-
-Your task: analyze the submitted content and return strictly valid JSON.
-Be concise but specific. Focus on manipulation tactics visible IN THE TEXT (fake experts, pseudo-science, urgency, fear, bandwagon, scams, etc.).`;
-
-  const searchSection = includeSearch
-    ? `\n\nYou have also been provided with RECENT WEB SEARCH RESULTS related to the content. Use these results to verify factual claims, but do not over-credit low-quality sources. If the search results contradict the submitted content, lower the credibility score and explain the discrepancy.`
-    : "";
-
-  const formatSection = `\n\nOutput format:
-{
-  "credibilityScore": number 0-100,
-  "verdict": one of ["safe", "suspicious", "misinformation", "scam"],
-  "redFlags": [
-    { "zh": "中文疑点", "en": "English red flag" }
-  ],
-  "elderExplanation": {
-    "zh": "一句可以直接发给老人的温暖解释（30-60字）",
-    "en": "A warm, plain-language sentence for the elder (30-60 words)"
-  },
-  "actionSuggestion": {
-    "zh": "建议晚辈的下一步行动",
-    "en": "Suggested next step for family member"
-  },
-  "summary": {
-    "zh": "简短中文总结",
-    "en": "Brief English summary"
-  }
-}
-
-Output ONLY JSON. No markdown code blocks, no extra text.`;
-
-  return base + searchSection + formatSection;
+export interface AnalysisResult {
+  credibilityScore: number;
+  verdict: "safe" | "suspicious" | "misinformation" | "scam";
+  redFlags: { zh: string; en: string }[];
+  elderExplanation: { zh: string; en: string };
+  actionSuggestion: { zh: string; en: string };
+  summary: { zh: string; en: string };
 }
 
 function extractJson(raw: string): string {
@@ -63,16 +37,59 @@ function extractJson(raw: string): string {
   throw new Error("No JSON object found in response");
 }
 
-export async function runSingleJudge(
+function buildJudgeSystemPrompt(): string {
+  const redFlagsPrompt = loadPrompt("judge_red_flags");
+  const factCheckPrompt = loadPrompt("judge_fact_check");
+  const explanationPrompt = loadPrompt("judge_explanation");
+  const verdictPrompt = loadPrompt("judge_verdict");
+
+  return `You are a member of a digital-safety panel helping families identify misinformation targeting elderly internet users.
+
+You must perform FOUR sub-tasks in a single JSON response:
+
+1. RED FLAGS (${redFlagsPrompt.split("\n")[2]})
+2. FACT CHECK (${factCheckPrompt.split("\n")[2]})
+3. EXPLANATION (${explanationPrompt.split("\n")[2]})
+4. VERDICT (${verdictPrompt.split("\n")[2]})
+
+Output strictly valid JSON in this exact format:
+{
+  "redFlags": [
+    { "zh": "...", "en": "..." }
+  ],
+  "claimChecks": [
+    { "claim": "...", "status": "true|false|unverified|misleading", "reasonZh": "...", "reasonEn": "..." }
+  ],
+  "overallFactStatus": "mostly_true|mixed|mostly_false|unverifiable",
+  "elderExplanation": { "zh": "...", "en": "..." },
+  "actionSuggestion": { "zh": "...", "en": "..." },
+  "credibilityScore": 0-100,
+  "verdict": "safe|suspicious|misinformation|scam",
+  "summary": { "zh": "...", "en": "..." }
+}
+
+No markdown code blocks, no extra text before or after.`;
+}
+
+export async function runJudge(
   provider: Provider,
-  content: string,
-  searchContext?: string
+  originalText: string,
+  extraction: Extraction,
+  supplementary?: string,
+  sessionContext?: string
 ): Promise<JudgeVote> {
-  const systemPrompt = buildSystemPrompt(!!searchContext);
-  let userContent = `Analyze the following content and return JSON only.\n\n---\n${content}\n---`;
-  if (searchContext) {
-    userContent += `\n\n## Recent Web Search Results\n\n${searchContext}\n\nUse the search results to help fact-check the content above.`;
+  const systemPrompt = buildJudgeSystemPrompt();
+
+  let userContent = "";
+  if (sessionContext) {
+    userContent += `## Conversation Context\n${sessionContext}\n\n`;
   }
+  userContent += `## Original Message\n${originalText}\n\n`;
+  userContent += `## Structured Extraction\n${JSON.stringify(extraction, null, 2)}\n\n`;
+  if (supplementary) {
+    userContent += `## Supplementary User Answers\n${supplementary}\n\n`;
+  }
+  userContent += "Please analyze the above message based on the structured extraction and return JSON only.";
 
   const raw = await provider.chat([
     { role: "system", content: systemPrompt },
@@ -177,23 +194,16 @@ export function ensemble(votes: JudgeVote[]): AnalysisResult {
   const verdict = countVotes(votes.map((v) => v.verdict)) as AnalysisResult["verdict"];
   const redFlags = dedupeFlags(votes.flatMap((v) => v.redFlags));
 
-  // Pick the longest elderExplanation as the most informative
   const bestElder = votes.reduce((best, v) =>
-    v.elderExplanation.zh.length > best.elderExplanation.zh.length
-      ? v
-      : best
+    v.elderExplanation.zh.length > best.elderExplanation.zh.length ? v : best
   );
 
   const bestAction = votes.reduce((best, v) =>
-    v.actionSuggestion.zh.length > best.actionSuggestion.zh.length
-      ? v
-      : best
+    v.actionSuggestion.zh.length > best.actionSuggestion.zh.length ? v : best
   );
 
   const bestSummary = votes.reduce((best, v) =>
-    v.summary.zh.length > best.summary.zh.length
-      ? v
-      : best
+    v.summary.zh.length > best.summary.zh.length ? v : best
   );
 
   return {

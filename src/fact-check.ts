@@ -1,4 +1,4 @@
-import { duckduckgoSearch, buildSearchContext, SearchResult } from "./search.js";
+import { searxngSearch, buildSearchContext, SearchResult } from "./search.js";
 
 // 快速判断用户输入是否包含需要事实核查的时效性/具体性内容
 const FACT_CHECK_TRIGGERS = [
@@ -51,7 +51,7 @@ export async function runFactCheck(text: string): Promise<FactCheckContext> {
 
   const query = extractSearchQuery(text);
   try {
-    const results = await duckduckgoSearch(query, 3);
+    const results = await searxngSearch(query, 3);
     return {
       needed: true,
       query,

@@ -1,6 +1,6 @@
 /**
- * Lightweight DuckDuckGo search module.
- * No API key required. Parses HTML search results.
+ * Lightweight search module using SearXNG public instances.
+ * Falls back through multiple instances automatically.
  */
 
 export interface SearchResult {
@@ -9,76 +9,70 @@ export interface SearchResult {
   snippet: string;
 }
 
-export async function duckduckgoSearch(query: string, maxResults = 3): Promise<SearchResult[]> {
+const SEARXNG_INSTANCES = [
+  "https://search.sapti.me",
+  "https://search.bus-hit.me",
+  "https://search.projectsegfault.com",
+  "https://search.demoniak.ch",
+];
+
+async function trySearchInstance(
+  instance: string,
+  query: string
+): Promise<SearchResult[]> {
   const encoded = encodeURIComponent(query);
-  const url = `https://html.duckduckgo.com/html/?q=${encoded}`;
+  const url = `${instance}/search?q=${encoded}&format=json&safesearch=0`;
 
   const res = await fetch(url, {
     headers: {
       "User-Agent":
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      Accept: "text/html",
+      Accept: "application/json",
     },
   });
 
   if (!res.ok) {
-    throw new Error(`DuckDuckGo search failed: ${res.status}`);
+    throw new Error(`HTTP ${res.status}`);
   }
 
-  const html = await res.text();
-  return parseDuckDuckGoHTML(html, maxResults);
-}
+  const data = (await res.json()) as {
+    results?: Array<{
+      title?: string;
+      url?: string;
+      content?: string;
+      engines?: string[];
+    }>;
+  };
 
-function parseDuckDuckGoHTML(html: string, maxResults: number): SearchResult[] {
-  const results: SearchResult[] = [];
-
-  // DuckDuckGo HTML results are in .result elements
-  const resultBlocks = html.split('<div class="result results_links results_links_deep web-result ">');
-
-  for (let i = 1; i < resultBlocks.length && results.length < maxResults; i++) {
-    const block = resultBlocks[i];
-
-    const titleMatch = block.match(/<a[^>]+class="result__a"[^>]*>([\s\S]*?)<\/a>/);
-    const urlMatch = block.match(/<a[^>]+class="result__a"[^>]+href="([^"]+)"/);
-    const snippetMatch = block.match(/<a[^>]+class="result__snippet"[^>]*>([\s\S]*?)<\/a>/);
-
-    if (titleMatch && snippetMatch) {
-      const title = stripHtml(titleMatch[1]).trim();
-      const snippet = stripHtml(snippetMatch[1]).trim();
-      const rawUrl = urlMatch ? urlMatch[1] : "";
-      const url = decodeDuckDuckGoUrl(rawUrl);
-
-      if (title && snippet) {
-        results.push({ title, url, snippet });
-      }
-    }
+  if (!Array.isArray(data.results)) {
+    throw new Error("Invalid response format");
   }
 
-  return results;
+  return data.results
+    .slice(0, 5)
+    .filter((r) => r.title && (r.content || r.url))
+    .map((r) => ({
+      title: r.title || "",
+      url: r.url || "",
+      snippet: (r.content || "").replace(/\s+/g, " ").trim(),
+    }));
 }
 
-function stripHtml(html: string): string {
-  return html
-    .replace(/<[^>]+>/g, "")
-    .replace(/&quot;/g, '"')
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&#x27;/g, "'")
-    .replace(/&nbsp;/g, " ");
-}
+export async function searxngSearch(query: string, maxResults = 3): Promise<SearchResult[]> {
+  const errors: string[] = [];
 
-function decodeDuckDuckGoUrl(url: string): string {
-  // DuckDuckGo wraps URLs like: /l/?uddg=https%3A%2F%2Fexample.com
-  const match = url.match(/uddg=([^&]+)/);
-  if (match) {
+  for (const instance of SEARXNG_INSTANCES) {
     try {
-      return decodeURIComponent(match[1]);
-    } catch {
-      return url;
+      const results = await trySearchInstance(instance, query);
+      if (results.length > 0) {
+        return results.slice(0, maxResults);
+      }
+    } catch (e: any) {
+      errors.push(`${instance}: ${e.message || String(e)}`);
     }
   }
-  return url;
+
+  throw new Error(`All SearXNG instances failed.\n${errors.slice(0, 3).join("\n")}`);
 }
 
 export function buildSearchContext(results: SearchResult[]): string {

@@ -11,9 +11,11 @@ import { transcribeAudio } from "./transcribe.js";
 import { clearHistory, formatHistoryPreview, loadHistory, saveHistoryEntry } from "./history.js";
 import { printBanner } from "./banner.js";
 import { resolveProvider } from "./resolve-provider.js";
-import { ensemble, runSingleJudge } from "./judge.js";
+import { ensemble, runJudge } from "./judge.js";
 import { startREPL } from "./repl.js";
 import { runFactCheck } from "./fact-check.js";
+import { extractStructured } from "./extractor.js";
+import { buildQuestions } from "./questioner.js";
 
 const program = new Command();
 
@@ -76,6 +78,43 @@ program
         process.exit(1);
       }
 
+      // Step 2: Extract structured facts using first provider
+      const firstResolved = resolveProvider(panelIds[0]);
+      const firstProvider = createProvider({
+        provider: firstResolved.meta.id,
+        apiKey: firstResolved.apiKey,
+        model: firstResolved.model,
+      });
+
+      const extractSpinner = ora("正在提取结构化事实...").start();
+      const extraction = await extractStructured(firstProvider, text);
+      extractSpinner.stop();
+
+      // Step 3: Ask follow-up questions (skip in non-TTY batch mode)
+      let supplementary = "";
+      if (extraction.gaps.length > 0 && process.stdin.isTTY) {
+        const qSpinner = ora("正在生成追问问题...").start();
+        const questions = await buildQuestions(firstProvider, extraction);
+        qSpinner.stop();
+
+        if (questions.length > 0) {
+          printInfo("消息里缺了一些关键信息，需要您补充一下：");
+          const readline = await import("node:readline");
+          const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+          const ask = (q: string): Promise<string> =>
+            new Promise((resolve) => rl.question(`  ${q} `, (a) => resolve(a.trim())));
+
+          const answers: string[] = [];
+          for (const q of questions) {
+            const a = await ask(q.zh);
+            if (a) answers.push(`${q.zh}\n回答: ${a}`);
+          }
+          rl.close();
+          if (answers.length > 0) supplementary = answers.join("\n\n");
+        }
+      }
+
+      // Step 4: Parallel judge
       const spinner = ora(`正在启动 ${panelIds.length} 模型委员会分析...`).start();
       try {
         const providers: Provider[] = [];
@@ -86,15 +125,17 @@ program
 
         const searchCtx = factCheck.needed ? factCheck.summary : undefined;
         const votes = await Promise.all(
-          providers.map((p) => runSingleJudge(p, text, searchCtx).catch((e) => {
-            return { provider: p.name, error: e.message || String(e) } as any;
-          }))
+          providers.map((p) =>
+            runJudge(p, text, extraction, supplementary || undefined, undefined).catch((e: any) => {
+              return { provider: p.name, error: e.message || String(e) } as any;
+            })
+          )
         );
 
-        const validVotes = votes.filter((v) => !v.error);
+        const validVotes = votes.filter((v: any) => !v.error);
         if (validVotes.length === 0) {
           spinner.stop();
-          printError("所有模型分析均失败。\n" + votes.map((v) => `${v.provider}: ${v.error}`).join("\n"));
+          printError("所有模型分析均失败。\n" + votes.map((v: any) => `${v.provider}: ${v.error}`).join("\n"));
           process.exit(1);
         }
 
