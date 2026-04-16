@@ -2,16 +2,6 @@ import { Provider } from "./providers/base.js";
 import { loadPrompt } from "./prompts.js";
 import { Extraction } from "./extractor.js";
 
-export interface JudgeVote {
-  provider: string;
-  credibilityScore: number;
-  verdict: string;
-  redFlags: { zh: string; en: string }[];
-  elderExplanation: { zh: string; en: string };
-  actionSuggestion: { zh: string; en: string };
-  summary: { zh: string; en: string };
-}
-
 export interface AnalysisResult {
   credibilityScore: number;
   verdict: "safe" | "suspicious" | "misinformation" | "scam";
@@ -37,38 +27,41 @@ function extractJson(raw: string): string {
   throw new Error("No JSON object found in response");
 }
 
-function buildJudgeSystemPrompt(): string {
-  const redFlagsPrompt = loadPrompt("judge_red_flags");
-  const factCheckPrompt = loadPrompt("judge_fact_check");
-  const explanationPrompt = loadPrompt("judge_explanation");
-  const verdictPrompt = loadPrompt("judge_verdict");
-
-  return `You are a member of a digital-safety panel helping families identify misinformation targeting elderly internet users.
-
-You must perform FOUR sub-tasks in a single JSON response:
-
-1. RED FLAGS (${redFlagsPrompt.split("\n")[2]})
-2. FACT CHECK (${factCheckPrompt.split("\n")[2]})
-3. EXPLANATION (${explanationPrompt.split("\n")[2]})
-4. VERDICT (${verdictPrompt.split("\n")[2]})
-
-Output strictly valid JSON in this exact format:
-{
-  "redFlags": [
-    { "zh": "...", "en": "..." }
-  ],
-  "claimChecks": [
-    { "claim": "...", "status": "true|false|unverified|misleading", "reasonZh": "...", "reasonEn": "..." }
-  ],
-  "overallFactStatus": "mostly_true|mixed|mostly_false|unverifiable",
-  "elderExplanation": { "zh": "...", "en": "..." },
-  "actionSuggestion": { "zh": "...", "en": "..." },
-  "credibilityScore": 0-100,
-  "verdict": "safe|suspicious|misinformation|scam",
-  "summary": { "zh": "...", "en": "..." }
+async function runSubJudge(
+  provider: Provider,
+  promptName: string,
+  userContent: string,
+  fallback: any
+): Promise<any> {
+  try {
+    const raw = await provider.chat([
+      { role: "system", content: loadPrompt(promptName) },
+      { role: "user", content: userContent },
+    ]);
+    const jsonStr = extractJson(raw);
+    return JSON.parse(jsonStr);
+  } catch (e: any) {
+    // Graceful degradation: return fallback on timeout/parse failure
+    return fallback;
+  }
 }
 
-No markdown code blocks, no extra text before or after.`;
+function buildUserContent(
+  originalText: string,
+  extraction: Extraction,
+  supplementary?: string,
+  sessionContext?: string
+): string {
+  let content = "";
+  if (sessionContext) {
+    content += `## Conversation Context\n${sessionContext}\n\n`;
+  }
+  content += `## Original Message\n${originalText}\n\n`;
+  content += `## Structured Extraction\n${JSON.stringify(extraction, null, 2)}\n\n`;
+  if (supplementary) {
+    content += `## Supplementary User Answers\n${supplementary}\n\n`;
+  }
+  return content;
 }
 
 export async function runJudge(
@@ -77,50 +70,35 @@ export async function runJudge(
   extraction: Extraction,
   supplementary?: string,
   sessionContext?: string
-): Promise<JudgeVote> {
-  const systemPrompt = buildJudgeSystemPrompt();
+): Promise<AnalysisResult> {
+  const baseContent = buildUserContent(originalText, extraction, supplementary, sessionContext);
 
-  let userContent = "";
-  if (sessionContext) {
-    userContent += `## Conversation Context\n${sessionContext}\n\n`;
-  }
-  userContent += `## Original Message\n${originalText}\n\n`;
-  userContent += `## Structured Extraction\n${JSON.stringify(extraction, null, 2)}\n\n`;
-  if (supplementary) {
-    userContent += `## Supplementary User Answers\n${supplementary}\n\n`;
-  }
-  userContent += "Please analyze the above message based on the structured extraction and return JSON only.";
-
-  const raw = await provider.chat([
-    { role: "system", content: systemPrompt },
-    { role: "user", content: userContent },
+  // Run 4 focused sub-judges in parallel
+  const [redFlagsRes, factCheckRes, explanationRes, verdictRes] = await Promise.all([
+    runSubJudge(provider, "judge_red_flags", baseContent, { redFlags: [] }),
+    runSubJudge(provider, "judge_fact_check", baseContent, { claimChecks: [], overallFactStatus: "unverifiable" }),
+    runSubJudge(provider, "judge_explanation", baseContent, { elderExplanation: { zh: "", en: "" }, actionSuggestion: { zh: "", en: "" } }),
+    runSubJudge(provider, "judge_verdict", baseContent, { credibilityScore: 50, verdict: "suspicious", summary: { zh: "", en: "" } }),
   ]);
 
-  const jsonStr = extractJson(raw);
-  const parsed = JSON.parse(jsonStr);
+  const redFlags = Array.isArray(redFlagsRes?.redFlags) ? redFlagsRes.redFlags : [];
+  const elderExplanation = explanationRes?.elderExplanation || { zh: "请谨慎对待该内容。", en: "Please treat this content with caution." };
+  const actionSuggestion = explanationRes?.actionSuggestion || { zh: "与家人讨论后再做决定。", en: "Discuss with family before acting." };
+  const score = typeof verdictRes?.credibilityScore === "number"
+    ? Math.max(0, Math.min(100, Math.round(verdictRes.credibilityScore)))
+    : 50;
+  const verdict = ["safe", "suspicious", "misinformation", "scam"].includes(verdictRes?.verdict)
+    ? verdictRes.verdict
+    : "suspicious";
+  const summary = verdictRes?.summary || { zh: "无法生成总结。", en: "Unable to generate summary." };
 
   return {
-    provider: provider.name,
-    credibilityScore:
-      typeof parsed.credibilityScore === "number"
-        ? Math.max(0, Math.min(100, Math.round(parsed.credibilityScore)))
-        : 50,
-    verdict: ["safe", "suspicious", "misinformation", "scam"].includes(parsed.verdict)
-      ? parsed.verdict
-      : "suspicious",
-    redFlags: Array.isArray(parsed.redFlags) ? parsed.redFlags : [],
-    elderExplanation: parsed.elderExplanation || {
-      zh: "请谨慎对待该内容。",
-      en: "Please treat this content with caution.",
-    },
-    actionSuggestion: parsed.actionSuggestion || {
-      zh: "与家人讨论后再做决定。",
-      en: "Discuss with family before acting.",
-    },
-    summary: parsed.summary || {
-      zh: "无法生成总结。",
-      en: "Unable to generate summary.",
-    },
+    credibilityScore: score,
+    verdict,
+    redFlags,
+    elderExplanation,
+    actionSuggestion,
+    summary,
   };
 }
 
@@ -174,20 +152,12 @@ function dedupeFlags(
   return out;
 }
 
-export function ensemble(votes: JudgeVote[]): AnalysisResult {
+export function ensemble(votes: AnalysisResult[]): AnalysisResult {
   if (votes.length === 0) {
     throw new Error("No judge votes to ensemble");
   }
   if (votes.length === 1) {
-    const v = votes[0];
-    return {
-      credibilityScore: v.credibilityScore,
-      verdict: v.verdict as AnalysisResult["verdict"],
-      redFlags: v.redFlags,
-      elderExplanation: v.elderExplanation,
-      actionSuggestion: v.actionSuggestion,
-      summary: v.summary,
-    };
+    return votes[0];
   }
 
   const score = trimmedMean(votes.map((v) => v.credibilityScore));

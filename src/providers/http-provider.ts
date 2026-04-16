@@ -14,7 +14,7 @@ export class HttpProvider implements Provider {
 
   async chat(messages: ChatMessage[]): Promise<string> {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 60000);
+    const timeout = setTimeout(() => controller.abort(), 120000);
 
     try {
       const res = await fetch(`${this.meta.baseURL}/chat/completions`, {

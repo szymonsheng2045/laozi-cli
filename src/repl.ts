@@ -4,7 +4,7 @@ import { loadConfig } from "./config.js";
 import { createProvider, Provider } from "./providers/base.js";
 import { resolveProvider } from "./resolve-provider.js";
 import { printResult, printInfo, printError, printFactCheck } from "./printer.js";
-import { ensemble, runJudge, AnalysisResult } from "./judge.js";
+import { ensemble, runJudge } from "./judge.js";
 import { saveHistoryEntry } from "./history.js";
 import { runFactCheck } from "./fact-check.js";
 import { SessionMemory } from "./session.js";
