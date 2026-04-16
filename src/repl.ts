@@ -4,9 +4,10 @@ import { loadConfig } from "./config.js";
 import { createProvider, Provider } from "./providers/base.js";
 import { resolveProvider } from "./resolve-provider.js";
 import { analyzeContent } from "./analyzer.js";
-import { printResult, printInfo, printError } from "./printer.js";
+import { printResult, printInfo, printError, printFactCheck } from "./printer.js";
 import { ensemble, runSingleJudge } from "./judge.js";
 import { saveHistoryEntry } from "./history.js";
+import { runFactCheck } from "./fact-check.js";
 import ora from "ora";
 
 export async function startREPL() {
@@ -68,6 +69,14 @@ export async function startREPL() {
 
     // Analyze the input
     try {
+      // Step 1: Fact-check layer
+      const fcSpinner = ora("正在判断是否需要联网核查...").start();
+      const factCheck = await runFactCheck(text);
+      fcSpinner.stop();
+      if (factCheck.needed) {
+        printFactCheck(factCheck.query, factCheck.results);
+      }
+
       if (usePanel) {
         const panelIds = config.judgePanel;
         if (panelIds.length === 1 && panelIds[0] === "rule-based") {
@@ -83,8 +92,9 @@ export async function startREPL() {
           providers.push(createProvider({ provider: resolved.meta.id, apiKey: resolved.apiKey, model: resolved.model }));
         }
 
+        const searchCtx = factCheck.needed ? factCheck.summary : undefined;
         const votes = await Promise.all(
-          providers.map((p) => runSingleJudge(p, text).catch((e) => {
+          providers.map((p) => runSingleJudge(p, text, searchCtx).catch((e) => {
             return { provider: p.name, error: e.message || String(e) } as any;
           }))
         );

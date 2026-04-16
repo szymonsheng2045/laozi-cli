@@ -11,12 +11,17 @@ export interface JudgeVote {
   summary: { zh: string; en: string };
 }
 
-const systemPrompt = `You are one member of a digital-safety panel helping families identify misinformation targeting elderly internet users.
+function buildSystemPrompt(includeSearch: boolean): string {
+  const base = `You are one member of a digital-safety panel helping families identify misinformation targeting elderly internet users.
 
 Your task: analyze the submitted content and return strictly valid JSON.
-Be concise but specific. Focus on manipulation tactics visible IN THE TEXT (fake experts, pseudo-science, urgency, fear, bandwagon, scams, etc.).
+Be concise but specific. Focus on manipulation tactics visible IN THE TEXT (fake experts, pseudo-science, urgency, fear, bandwagon, scams, etc.).`;
 
-Output format:
+  const searchSection = includeSearch
+    ? `\n\nYou have also been provided with RECENT WEB SEARCH RESULTS related to the content. Use these results to verify factual claims, but do not over-credit low-quality sources. If the search results contradict the submitted content, lower the credibility score and explain the discrepancy.`
+    : "";
+
+  const formatSection = `\n\nOutput format:
 {
   "credibilityScore": number 0-100,
   "verdict": one of ["safe", "suspicious", "misinformation", "scam"],
@@ -39,6 +44,9 @@ Output format:
 
 Output ONLY JSON. No markdown code blocks, no extra text.`;
 
+  return base + searchSection + formatSection;
+}
+
 function extractJson(raw: string): string {
   const trimmed = raw.trim();
   if (trimmed.startsWith("{") && trimmed.endsWith("}")) return trimmed;
@@ -52,16 +60,23 @@ function extractJson(raw: string): string {
   if (start !== -1 && end !== -1 && end > start) {
     return trimmed.slice(start, end + 1);
   }
-  throw new Error("No JSON object found");
+  throw new Error("No JSON object found in response");
 }
 
 export async function runSingleJudge(
   provider: Provider,
-  content: string
+  content: string,
+  searchContext?: string
 ): Promise<JudgeVote> {
+  const systemPrompt = buildSystemPrompt(!!searchContext);
+  let userContent = `Analyze the following content and return JSON only.\n\n---\n${content}\n---`;
+  if (searchContext) {
+    userContent += `\n\n## Recent Web Search Results\n\n${searchContext}\n\nUse the search results to help fact-check the content above.`;
+  }
+
   const raw = await provider.chat([
     { role: "system", content: systemPrompt },
-    { role: "user", content: `Analyze the following content and return JSON only.\n\n---\n${content}\n---` },
+    { role: "user", content: userContent },
   ]);
 
   const jsonStr = extractJson(raw);

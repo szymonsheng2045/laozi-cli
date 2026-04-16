@@ -6,13 +6,14 @@ import { analyzeContent, AnalysisResult } from "./analyzer.js";
 import { createProvider, Provider } from "./providers/base.js";
 import { listProviders } from "./providers/registry.js";
 import { loadConfig, saveConfig, configPathDisplay } from "./config.js";
-import { printError, printInfo, printResult } from "./printer.js";
+import { printError, printInfo, printResult, printFactCheck } from "./printer.js";
 import { transcribeAudio } from "./transcribe.js";
 import { clearHistory, formatHistoryPreview, loadHistory, saveHistoryEntry } from "./history.js";
 import { printBanner } from "./banner.js";
 import { resolveProvider } from "./resolve-provider.js";
 import { ensemble, runSingleJudge } from "./judge.js";
 import { startREPL } from "./repl.js";
+import { runFactCheck } from "./fact-check.js";
 
 const program = new Command();
 
@@ -57,6 +58,14 @@ program
     const config = loadConfig();
     const usePanel = options.panel || config.judgePanel.length > 0;
 
+    // Step 1: Fact-check layer
+    const fcSpinner = ora("正在判断是否需要联网核查...").start();
+    const factCheck = await runFactCheck(text);
+    fcSpinner.stop();
+    if (factCheck.needed) {
+      printFactCheck(factCheck.query, factCheck.results);
+    }
+
     if (usePanel) {
       const panelIds = config.judgePanel.length > 0 ? config.judgePanel : [config.provider];
       if (panelIds.length === 0 || (panelIds.length === 1 && panelIds[0] === "rule-based")) {
@@ -75,8 +84,9 @@ program
           providers.push(createProvider({ provider: resolved.meta.id, apiKey: resolved.apiKey, model: resolved.model }));
         }
 
+        const searchCtx = factCheck.needed ? factCheck.summary : undefined;
         const votes = await Promise.all(
-          providers.map((p) => runSingleJudge(p, text).catch((e) => {
+          providers.map((p) => runSingleJudge(p, text, searchCtx).catch((e) => {
             return { provider: p.name, error: e.message || String(e) } as any;
           }))
         );

@@ -100,3 +100,22 @@ export function printError(msg: string) {
 export function printInfo(msg: string) {
   console.log(chalk.blue("ℹ " + msg));
 }
+
+export function printFactCheck(query: string, results: { title: string; url: string; snippet: string }[]) {
+  const line = chalk.gray("━".repeat(50));
+  console.log("\n" + line);
+  console.log(chalk.bold("  联网事实核查 / Web Fact Check"));
+  console.log(chalk.gray(`  搜索词: ${query}`));
+  console.log(line);
+  if (results.length === 0) {
+    console.log(`  ${chalk.yellow("⚠ 暂未获取到搜索结果，将基于模型知识库继续分析。")}`);
+    console.log(`  ${chalk.gray("Search returned no results; continuing with model knowledge base.")}`);
+  } else {
+    results.forEach((r, i) => {
+      console.log(`  ${i + 1}. ${chalk.cyan(r.title)}`);
+      console.log(`     ${chalk.gray(r.snippet.slice(0, 80))}${r.snippet.length > 80 ? "…" : ""}`);
+      console.log(`     ${chalk.dim(r.url)}`);
+    });
+  }
+  console.log(line + "\n");
+}
