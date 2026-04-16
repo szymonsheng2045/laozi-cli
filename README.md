@@ -17,14 +17,20 @@ LAOZI.CLI bridges that gap. Paste (or voice-transcribe) the suspicious content, 
 
 ## Install
 
+### One-line install (recommended)
+
 ```bash
-npm install -g laozi-cli
+curl -fsSL https://laozi.art/install.sh | bash
 ```
 
-Or install directly from GitHub:
+### Manual install
 
 ```bash
-npm install -g github:szymonsheng2045/laozi-cli
+git clone https://github.com/szymonsheng2045/laozi-cli.git ~/.laozi-cli
+cd ~/.laozi-cli
+npm install
+npm run build
+npm link
 ```
 
 ## Configure
@@ -71,6 +77,20 @@ laozi check "..." --lang en        # English only
 laozi check "..." --lang bilingual # Both (default)
 ```
 
+### View history
+
+```bash
+laozi history          # list recent checks
+laozi history --clear  # clear all history
+```
+
+### Export report
+
+```bash
+laozi export                    # export latest to laozi-report.md
+laozi export ~/Desktop/report.md
+```
+
 ## Example Output
 
 ```text
@@ -109,6 +129,7 @@ laozi check "..." --lang bilingual # Both (default)
 laozi-cli
 ├── src/cli.ts           # Commander entrypoint
 ├── src/config.ts        # ~/.laozi/config.json management
+├── src/history.ts       # ~/.laozi/history.json persistence
 ├── src/llm.ts           # OpenAI-compatible chat client
 ├── src/transcribe.ts    # Whisper transcription
 ├── src/analyzer.ts      # Prompt engineering + JSON parsing
@@ -119,6 +140,7 @@ Core design principles:
 - **No heavy local models**. All intelligence is delegated to a remote LLM.
 - **Minimal dependencies**. Fast install, small footprint.
 - **Bilingual-first**. Output designed for copy-paste into family chats.
+- **History & export**. Every analysis is saved and can be exported to Markdown.
 
 ## License
 

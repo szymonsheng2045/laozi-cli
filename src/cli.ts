@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 import { Command } from "commander";
-import { existsSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
 import ora from "ora";
 import { analyzeContent, AnalysisResult } from "./analyzer.js";
 import { createClient } from "./llm.js";
 import { loadConfig, saveConfig, configPathDisplay } from "./config.js";
 import { printError, printInfo, printResult } from "./printer.js";
 import { transcribeAudio } from "./transcribe.js";
+import { clearHistory, formatHistoryPreview, loadHistory, saveHistoryEntry } from "./history.js";
 
 const program = new Command();
 
@@ -33,6 +34,13 @@ program
       const result = await analyzeContent(client, config, text);
       spinner.stop();
       printResult(result as AnalysisResult, options.lang || config.language);
+      saveHistoryEntry({
+        id: Math.random().toString(36).slice(2),
+        timestamp: new Date().toISOString(),
+        inputType: "text",
+        inputPreview: text,
+        result,
+      });
     } catch (err: any) {
       spinner.stop();
       printError(err.message || String(err));
@@ -74,6 +82,13 @@ program
       const result = await analyzeContent(client, config, transcript);
       spinner.stop();
       printResult(result as AnalysisResult, options.lang || config.language);
+      saveHistoryEntry({
+        id: Math.random().toString(36).slice(2),
+        timestamp: new Date().toISOString(),
+        inputType: "voice",
+        inputPreview: transcript,
+        result,
+      });
     } catch (err: any) {
       spinner.stop();
       printError(err.message || String(err));
@@ -105,6 +120,77 @@ program
 
     saveConfig(updates);
     printInfo(`配置已保存到: ${configPathDisplay()}`);
+  });
+
+program
+  .command("history")
+  .description("查看历史分析记录")
+  .option("--clear", "清空历史记录")
+  .action((options: { clear?: boolean }) => {
+    if (options.clear) {
+      clearHistory();
+      printInfo("历史记录已清空");
+      return;
+    }
+    const history = loadHistory();
+    if (history.length === 0) {
+      printInfo("暂无历史记录");
+      return;
+    }
+    console.log("\n最近分析记录：\n");
+    history.forEach((entry, i) => {
+      console.log(`  ${i + 1}. ${formatHistoryPreview(entry)}`);
+    });
+    console.log("");
+  });
+
+program
+  .command("export [filepath]")
+  .description("导出最近一次分析结果为 Markdown")
+  .action((filepath: string = "laozi-report.md") => {
+    const history = loadHistory();
+    if (history.length === 0) {
+      printError("暂无历史记录可导出");
+      process.exit(1);
+    }
+    const entry = history[0];
+    const r = entry.result;
+    const md = `# LAOZI.CLI 分析报告
+
+> 分析时间: ${new Date(entry.timestamp).toLocaleString("zh-CN")}  
+> 输入类型: ${entry.inputType === "text" ? "文字" : "语音"}  
+> 输入内容: ${entry.inputPreview}
+
+---
+
+## 可信度评分
+
+**${r.credibilityScore}/100** — ${r.verdict}
+
+## 主要疑点
+
+${r.redFlags.map((f, i) => `${i + 1}. ${f.zh}\n   ${f.en}`).join("\n\n")}
+
+## 给老人的解释
+
+${r.elderExplanation.zh}
+
+${r.elderExplanation.en}
+
+## 建议操作
+
+${r.actionSuggestion.zh}
+
+${r.actionSuggestion.en}
+
+## 总结
+
+${r.summary.zh}
+
+${r.summary.en}
+`;
+    writeFileSync(filepath, md, "utf-8");
+    printInfo(`报告已导出: ${filepath}`);
   });
 
 program.parse();
