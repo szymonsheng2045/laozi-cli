@@ -117,16 +117,29 @@ function trimmedMean(scores: number[]): number {
   return Math.round(trimmed.reduce((a, b) => a + b, 0) / trimmed.length);
 }
 
+function normalizeFlagKey(zh: string): string {
+  return zh
+    .replace(/[\s"'「」【】]/g, "")
+    .replace(/专家/g, "")
+    .replace(/群里/g, "")
+    .replace(/转发/g, "")
+    .slice(0, 25);
+}
+
 function dedupeFlags(
-  flags: { zh: string; en: string }[]
+  flags: { zh: string; en: string }[],
+  max = 6
 ): { zh: string; en: string }[] {
   const seen = new Set<string>();
-  return flags.filter((f) => {
-    const key = f.zh.slice(0, 20);
-    if (seen.has(key)) return false;
+  const out: { zh: string; en: string }[] = [];
+  for (const f of flags) {
+    const key = normalizeFlagKey(f.zh);
+    if (seen.has(key)) continue;
     seen.add(key);
-    return true;
-  });
+    out.push(f);
+    if (out.length >= max) break;
+  }
+  return out;
 }
 
 export function ensemble(votes: JudgeVote[]): AnalysisResult {

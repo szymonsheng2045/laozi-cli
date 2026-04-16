@@ -56,7 +56,9 @@ export function resolveProvider(
     );
   }
 
-  const finalModel = model || config.model || meta.defaultModel;
+  const rawModel = model || config.model;
+  const finalModel =
+    rawModel && rawModel !== "local-rules" ? rawModel : meta.defaultModel;
 
   return {
     meta,
