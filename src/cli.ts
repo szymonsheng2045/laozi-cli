@@ -12,6 +12,7 @@ import { clearHistory, formatHistoryPreview, loadHistory, saveHistoryEntry } fro
 import { printBanner } from "./banner.js";
 import { resolveProvider } from "./resolve-provider.js";
 import { ensemble, runSingleJudge } from "./judge.js";
+import { startREPL } from "./repl.js";
 
 const program = new Command();
 
@@ -311,9 +312,10 @@ ${r.summary.en}
     printInfo(`报告已导出: ${filepath}`);
   });
 
-// 默认行为：无参数时显示 banner
-program.action(() => {
+// 默认行为：无参数时进入 REPL 交互模式
+program.action(async () => {
   printBanner();
+  await startREPL();
 });
 
 program.parse();
