@@ -15,8 +15,8 @@ import { resolveProvider } from "./resolve-provider.js";
 import { ensemble, runJudge } from "./judge.js";
 import { startREPL } from "./repl.js";
 import { runFactCheck } from "./fact-check.js";
-import { extractStructured } from "./extractor.js";
-import { buildQuestions } from "./questioner.js";
+import { extractStructured, Extraction } from "./extractor.js";
+import { buildQuestions, Question } from "./questioner.js";
 
 const program = new Command();
 
@@ -57,9 +57,10 @@ program
   .description("分析一段文字内容的真实性")
   .option("-l, --lang <lang>", "输出语言: zh | en | bilingual", "bilingual")
   .option("--panel", "启用多模型委员会并行分析")
-  .action(async (text: string, options: { lang: string; panel?: boolean }) => {
+  .option("--no-panel", "禁用多模型委员会，使用单模型")
+  .action(async (text: string, options: { lang: string; panel?: boolean; noPanel?: boolean }) => {
     const config = loadConfig();
-    const usePanel = options.panel || config.judgePanel.length > 0;
+    const usePanel = !options.noPanel && (options.panel || config.judgePanel.length > 0);
 
     // Step 1: Fact-check layer
     const fcSpinner = ora("正在判断是否需要联网核查...").start();
@@ -204,8 +205,12 @@ program
   .command("voice <filepath>")
   .description("将语音文件转文字后分析其真实性")
   .option("-l, --lang <lang>", "输出语言: zh | en | bilingual", "bilingual")
-  .action(async (filepath: string, options: { lang: string }) => {
-    const { provider, config } = await getProvider();
+  .option("--panel", "启用多模型委员会并行分析")
+  .option("--no-panel", "禁用多模型委员会，使用单模型")
+  .action(async (filepath: string, options: { lang: string; panel?: boolean; noPanel?: boolean }) => {
+    const config = loadConfig();
+    const usePanel = !options.noPanel && (options.panel || config.judgePanel.length > 0);
+
     if (!existsSync(filepath)) {
       printError(`文件不存在: ${filepath}`);
       process.exit(1);
@@ -218,7 +223,7 @@ program
           `您可以：\n` +
           `1. 手动将语音转为文字后使用 "laozi check <文字>"\n` +
           `2. 或配置 API key 用于语音转录：\n` +
-          `   laozi config --provider qwen --api-key <key>`
+          `   laozi config --api-key <key>`
       );
       process.exit(1);
     }
@@ -237,11 +242,136 @@ program
       process.exit(1);
     }
 
+    // Reuse the same pipeline as check command
+    if (usePanel) {
+      const panelIds = config.judgePanel.length > 0 ? config.judgePanel : [config.provider];
+      if (panelIds.length === 0 || (panelIds.length === 1 && panelIds[0] === "rule-based")) {
+        printError(
+          "多模型委员会模式需要配置至少一个 API provider。\n" +
+            "示例: laozi config --judge-panel qwen,kimi,zhipu,minimax"
+        );
+        process.exit(1);
+      }
+
+      // Extract
+      printStage("正在提取结构化事实...", "◆");
+      const firstResolved = resolveProvider(panelIds[0]);
+      const firstProvider = createProvider({
+        provider: firstResolved.meta.id,
+        apiKey: firstResolved.apiKey,
+        model: firstResolved.model,
+      });
+
+      let extraction: Extraction;
+      try {
+        extraction = await extractStructured(firstProvider, transcript);
+      } catch (extractErr: any) {
+        printError(`结构化提取失败: ${extractErr.message}`);
+        printInfo("正在 fallback 到本地规则引擎...");
+        const { provider } = await getProvider();
+        const result = await analyzeContent(provider, config, transcript);
+        printResult(result, options.lang || config.language);
+        process.exit(0);
+      }
+      console.log(`  ${chalk.green("✓")} 信息类型: ${extraction.message_type} · 声称: ${extraction.claims.length}条 · 缺口: ${extraction.gaps.length}个`);
+
+      // Voice mode skips interactive follow-up questions in non-TTY
+      let supplementary = "";
+      if (extraction.gaps.length > 0 && process.stdin.isTTY) {
+        const qSpinner = ora("正在生成追问问题...").start();
+        let questions: Question[] = [];
+        try {
+          questions = await buildQuestions(firstProvider, extraction);
+        } catch {
+          questions = [];
+        }
+        qSpinner.stop();
+
+        if (questions.length > 0) {
+          printInfo("消息里缺了一些关键信息，需要您补充一下：");
+          const readline = await import("node:readline");
+          const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+          const ask = (q: string): Promise<string> =>
+            new Promise((resolve) => rl.question(`  ${q} `, (a: string) => resolve(a.trim())));
+
+          const answers: string[] = [];
+          for (const q of questions) {
+            const a = await ask(q.zh);
+            if (a) answers.push(`${q.zh}\n回答: ${a}`);
+          }
+          rl.close();
+          if (answers.length > 0) supplementary = answers.join("\n\n");
+        }
+      }
+
+      // Parallel judge
+      printStage(`启动 ${panelIds.length} 模型委员会分析`, "◆");
+      const providers = [];
+      for (const id of panelIds) {
+        try {
+          const resolved = resolveProvider(id);
+          providers.push(createProvider({ provider: resolved.meta.id, apiKey: resolved.apiKey, model: resolved.model }));
+        } catch {
+          console.log(`  ${chalk.yellow("⚠")} ${id.padEnd(18)} 配置缺失，跳过`);
+        }
+      }
+
+      if (providers.length === 0) {
+        printError("所有模型配置均不可用，fallback 到本地规则引擎。");
+        const { provider } = await getProvider();
+        const result = await analyzeContent(provider, config, transcript);
+        printResult(result, options.lang || config.language);
+        process.exit(0);
+      }
+
+      providers.forEach((p) => printModelProgress(p.name, "running"));
+
+      const results = await Promise.all(
+        providers.map(async (p) => {
+          try {
+            const r = await runJudge(p, transcript, extraction, supplementary || undefined);
+            return r;
+          } catch (e: any) {
+            console.log(`    ${chalk.red("✗")} ${p.name.padEnd(18)} ${chalk.gray(e.message || "失败")}`);
+            return null;
+          }
+        })
+      );
+
+      console.log("");
+      providers.forEach((p, i) => {
+        printModelProgress(p.name, results[i] ? "done" : "error");
+      });
+      console.log("");
+
+      const validResults = results.filter((r): r is NonNullable<typeof r> => r !== null);
+      if (validResults.length === 0) {
+        printError("所有模型分析均失败，fallback 到本地规则引擎。");
+        const { provider } = await getProvider();
+        const result = await analyzeContent(provider, config, transcript);
+        printResult(result, options.lang || config.language);
+        process.exit(0);
+      }
+
+      const result = ensemble(validResults);
+      printResult(result, options.lang || config.language);
+      saveHistoryEntry({
+        id: Math.random().toString(36).slice(2),
+        timestamp: new Date().toISOString(),
+        inputType: "voice",
+        inputPreview: transcript,
+        result,
+      });
+      process.exit(0);
+    }
+
+    // Single-provider / rule-based mode
+    const { provider } = await getProvider();
     spinner = ora("正在分析内容...").start();
     try {
       const result = await analyzeContent(provider, config, transcript);
       spinner.stop();
-      printResult(result as AnalysisResult, options.lang || config.language);
+      printResult(result, options.lang || config.language);
       saveHistoryEntry({
         id: Math.random().toString(36).slice(2),
         timestamp: new Date().toISOString(),
@@ -260,7 +390,8 @@ program
   .command("config")
   .description("配置 CLI 参数")
   .option("--provider <name>", "模型提供者: rule-based, qwen, kimi, deepseek, zhipu, minimax, openai, anthropic, gemini, ollama, llama-cpp")
-  .option("--api-key <key>", "设置 API Key")
+  .option("--api-key <key>", "设置全局 API Key")
+  .option("--key <provider:key>", "设置指定 provider 的 API Key，格式: qwen:sk-xxx")
   .option("--base-url <url>", "设置 API Base URL")
   .option("--model <model>", "设置分析用模型")
   .option("--whisper-model <model>", "设置语音转文字模型")
@@ -279,6 +410,20 @@ program
         .split(",")
         .map((s: string) => s.trim())
         .filter(Boolean);
+    }
+
+    // Provider-specific key: --key qwen:sk-xxx
+    if (options.key !== undefined) {
+      const parts = options.key.split(":");
+      if (parts.length >= 2) {
+        const providerId = parts[0];
+        const keyValue = parts.slice(1).join(":");
+        const current = loadConfig();
+        updates.keys = { ...current.keys, [providerId]: keyValue };
+      } else {
+        printError("--key 格式错误，应为: provider:key，例如: qwen:sk-xxx");
+        process.exit(1);
+      }
     }
 
     if (Object.keys(updates).length === 0) {

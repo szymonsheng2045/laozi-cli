@@ -1,6 +1,7 @@
 import { Provider } from "./providers/base.js";
 import { Extraction } from "./extractor.js";
 import { AnalysisResult } from "./judge.js";
+import { extractJson } from "./utils.js";
 
 const FOLLOW_UP_SYSTEM = `你是一个数字安全顾问。用户基于刚才的分析结果提出了追问，请用客观、简洁的陈述事实口吻回答。
 
@@ -18,22 +19,6 @@ const FOLLOW_UP_SYSTEM = `你是一个数字安全顾问。用户基于刚才的
   "answerEn": "English translation",
   "needsMoreContext": false
 }`;
-
-function extractJson(raw: string): string {
-  const trimmed = raw.trim();
-  if (trimmed.startsWith("{") && trimmed.endsWith("}")) return trimmed;
-  const block = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (block) {
-    const inner = block[1].trim();
-    if (inner.startsWith("{")) return inner;
-  }
-  const start = trimmed.indexOf("{");
-  const end = trimmed.lastIndexOf("}");
-  if (start !== -1 && end !== -1 && end > start) {
-    return trimmed.slice(start, end + 1);
-  }
-  throw new Error("No JSON found");
-}
 
 export interface FollowUpAnswer {
   answerZh: string;

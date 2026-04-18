@@ -11,9 +11,10 @@ import { SessionMemory } from "./session.js";
 import { extractStructured, Extraction } from "./extractor.js";
 import { buildQuestions } from "./questioner.js";
 import { runFollowUp } from "./follow-up.js";
+import { analyzeContent } from "./analyzer.js";
 import ora from "ora";
 
-const COMMANDS = ["/quit", "/exit", "/q", "/help", "/config", "/history", "/copy", "/done"];
+const COMMANDS = ["/quit", "/exit", "/q", "/help", "/config", "/history", "/copy", "/done", "/cancel"];
 
 function completer(line: string): [string[], string] {
   if (line.startsWith("/")) {
@@ -24,7 +25,7 @@ function completer(line: string): [string[], string] {
   return [[], line];
 }
 
-async function animateExtraction(provider: Provider, text: string): Promise<Extraction> {
+async function safeExtract(provider: Provider, text: string): Promise<Extraction> {
   const hints = [
     "正在识别信息类型...",
     "正在提取声称的事实...",
@@ -37,7 +38,6 @@ async function animateExtraction(provider: Provider, text: string): Promise<Extr
   let current = 0;
   let stopped = false;
 
-  // Print first hint
   console.log(`  ${chalk.yellow("◌")} ${hints[0]}`);
 
   const interval = setInterval(() => {
@@ -68,6 +68,7 @@ export async function startREPL() {
   let lastResult: AnalysisResult | null = null;
   let lastOriginalText = "";
   let followUpRound = 0;
+  let isAnalyzing = false;
 
   console.log(chalk.hex("#c9a961")("\n欢迎来到 laozi.cli — 输入文字即可分析，输入 /quit 退出\n"));
   console.log(chalk.gray("  提示：输入 / 后按 Tab 键可查看可用命令\n"));
@@ -92,7 +93,6 @@ export async function startREPL() {
   rl.on("line", async (input) => {
     const text = input.trim();
 
-    // Show command list if user typed just "/"
     if (text === "/") {
       console.log("");
       console.log(chalk.bold("  可用命令 / Available Commands:"));
@@ -101,6 +101,7 @@ export async function startREPL() {
       console.log(`  ${chalk.hex("#c9a961")("/history")}  查看分析历史`);
       console.log(`  ${chalk.hex("#c9a961")("/copy")}    复制最近一次结果到剪贴板`);
       console.log(`  ${chalk.hex("#c9a961")("/done")}    结束追问，回到主分析模式`);
+      console.log(`  ${chalk.hex("#c9a961")("/cancel")}  取消当前分析或追问`);
       console.log("");
       rl.prompt();
       return;
@@ -122,6 +123,7 @@ export async function startREPL() {
       console.log("  /history 查看分析历史");
       console.log("  /copy    复制最近一次分析结果到剪贴板");
       console.log("  /done    结束当前追问，回到主分析模式");
+      console.log("  /cancel  取消当前分析或追问");
       console.log("  提示：输入 / 后按 Tab 键可补全命令");
       console.log("");
       rl.prompt();
@@ -182,6 +184,26 @@ export async function startREPL() {
       rl.prompt();
       return;
     }
+    if (text === "/cancel") {
+      if (isAnalyzing) {
+        printInfo("分析正在后台进行，无法中途取消。请等待完成或按 Ctrl+C 退出。");
+      } else if (followUpRound > 0) {
+        followUpRound = 0;
+        lastExtraction = null;
+        lastResult = null;
+        printInfo("已取消追问模式，回到主分析模式。");
+      } else {
+        printInfo("当前没有正在进行的分析或追问。");
+      }
+      rl.prompt();
+      return;
+    }
+
+    if (isAnalyzing) {
+      printInfo("正在分析中，请稍候... 或输入 /cancel 取消追问模式");
+      rl.prompt();
+      return;
+    }
 
     // ── Follow-up mode ──
     if (followUpRound > 0 && followUpRound <= 5 && lastExtraction && lastResult) {
@@ -216,6 +238,7 @@ export async function startREPL() {
     }
 
     // ── Full analysis pipeline ──
+    isAnalyzing = true;
     try {
       session.pushUser(text);
       lastOriginalText = text;
@@ -236,16 +259,29 @@ export async function startREPL() {
           return;
         }
 
-        // Step 2: Extract with animated hints
+        // Step 2: Extract
         printStage("正在提取结构化事实...", "◆");
-        const firstResolved = resolveProvider(panelIds[0]);
-        const firstProvider = createProvider({
-          provider: firstResolved.meta.id,
-          apiKey: firstResolved.apiKey,
-          model: firstResolved.model,
-        });
+        let firstProvider: Provider;
+        let extraction: Extraction;
+        try {
+          const firstResolved = resolveProvider(panelIds[0]);
+          firstProvider = createProvider({
+            provider: firstResolved.meta.id,
+            apiKey: firstResolved.apiKey,
+            model: firstResolved.model,
+          });
+          extraction = await safeExtract(firstProvider, text);
+        } catch (extractErr: any) {
+          printError(`结构化提取失败: ${extractErr.message}`);
+          printInfo("正在 fallback 到本地规则引擎...");
+          const { provider } = await getSingleProvider();
+          const result = await analyzeContent(provider, config, text);
+          printResult(result, config.language);
+          isAnalyzing = false;
+          rl.prompt();
+          return;
+        }
 
-        const extraction = await animateExtraction(firstProvider, text);
         lastExtraction = extraction;
         console.log(`  ${chalk.green("✓")} 信息类型: ${extraction.message_type} · 声称: ${extraction.claims.length}条 · 缺口: ${extraction.gaps.length}个`);
 
@@ -253,7 +289,12 @@ export async function startREPL() {
         let supplementary = "";
         if (extraction.gaps.length > 0) {
           const qsSpinner = ora("正在生成追问问题...").start();
-          const questions = await buildQuestions(firstProvider, extraction);
+          let questions: import("./questioner.js").Question[] = [];
+          try {
+            questions = await buildQuestions(firstProvider!, extraction);
+          } catch {
+            questions = [];
+          }
           qsSpinner.stop();
 
           if (questions.length > 0) {
@@ -274,8 +315,22 @@ export async function startREPL() {
         printStage(`启动 ${panelIds.length} 模型委员会分析`, "◆");
         const providers: Provider[] = [];
         for (const id of panelIds) {
-          const resolved = resolveProvider(id);
-          providers.push(createProvider({ provider: resolved.meta.id, apiKey: resolved.apiKey, model: resolved.model }));
+          try {
+            const resolved = resolveProvider(id);
+            providers.push(createProvider({ provider: resolved.meta.id, apiKey: resolved.apiKey, model: resolved.model }));
+          } catch (resolveErr: any) {
+            console.log(`  ${chalk.yellow("⚠")} ${id.padEnd(18)} 配置缺失，跳过`);
+          }
+        }
+
+        if (providers.length === 0) {
+          printError("所有模型配置均不可用，fallback 到本地规则引擎。");
+          const { provider } = await getSingleProvider();
+          const result = await analyzeContent(provider, config, text);
+          printResult(result, config.language);
+          isAnalyzing = false;
+          rl.prompt();
+          return;
         }
 
         const searchCtx = factCheck.needed ? factCheck.summary : undefined;
@@ -293,6 +348,7 @@ export async function startREPL() {
               return r;
             } catch (e: any) {
               modelStatuses.set(p.name, "error");
+              console.log(`    ${chalk.red("✗")} ${p.name.padEnd(18)} ${chalk.gray(e.message || "失败")}`);
               return null;
             }
           })
@@ -305,8 +361,13 @@ export async function startREPL() {
         console.log("");
 
         const validResults = results.filter((r): r is NonNullable<typeof r> => r !== null);
+
         if (validResults.length === 0) {
-          printError("所有模型分析均失败。");
+          printError("所有模型分析均失败，fallback 到本地规则引擎。");
+          const { provider } = await getSingleProvider();
+          const result = await analyzeContent(provider, config, text);
+          printResult(result, config.language);
+          isAnalyzing = false;
           rl.prompt();
           return;
         }
@@ -332,7 +393,6 @@ export async function startREPL() {
         // Single-provider / rule-based mode
         const { provider } = await getSingleProvider();
         const spinner = ora("正在分析内容...").start();
-        const { analyzeContent } = await import("./analyzer.js");
         const result = await analyzeContent(provider, config, text);
         spinner.stop();
         printResult(result, config.language);
@@ -348,6 +408,8 @@ export async function startREPL() {
       }
     } catch (err: any) {
       printError(err.message || String(err));
+    } finally {
+      isAnalyzing = false;
     }
 
     rl.prompt();

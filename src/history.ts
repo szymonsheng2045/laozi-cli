@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, chmodSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { AnalysisResult } from "./analyzer.js";
@@ -26,8 +26,15 @@ export function loadHistory(): HistoryEntry[] {
     return [];
   }
   try {
-    return JSON.parse(readFileSync(historyPath, "utf-8")) as HistoryEntry[];
+    const raw = readFileSync(historyPath, "utf-8");
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      console.warn("[laozi] history.json 格式异常，已重置。");
+      return [];
+    }
+    return parsed as HistoryEntry[];
   } catch {
+    console.warn("[laozi] history.json 读取失败，已重置。");
     return [];
   }
 }
@@ -39,6 +46,11 @@ export function saveHistoryEntry(entry: HistoryEntry): void {
   // 只保留最近 50 条
   const trimmed = history.slice(0, 50);
   writeFileSync(historyPath, JSON.stringify(trimmed, null, 2), "utf-8");
+  try {
+    chmodSync(historyPath, 0o600);
+  } catch {
+    // Ignore permission errors on Windows
+  }
 }
 
 export function clearHistory(): void {

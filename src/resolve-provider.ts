@@ -38,8 +38,14 @@ export function resolveProvider(
     throw new Error(`Unknown provider: ${finalProviderId}`);
   }
 
-  // Priority: explicit arg > config file > env var
-  let finalKey = apiKey || config.apiKey || "";
+  // Priority: explicit arg > provider-specific key > global config key > env var
+  let finalKey = apiKey || "";
+  if (!finalKey && config.keys && config.keys[meta.id]) {
+    finalKey = config.keys[meta.id];
+  }
+  if (!finalKey) {
+    finalKey = config.apiKey || "";
+  }
   if (!finalKey && meta.envKey) {
     finalKey = process.env[meta.envKey] || "";
   }
@@ -47,11 +53,11 @@ export function resolveProvider(
   // Local models don't require API keys
   if (meta.type !== "local" && !finalKey) {
     const sources = meta.envKey
-      ? `config file or environment variable ${meta.envKey}`
+      ? `config file (keys.${meta.id} or apiKey) or environment variable ${meta.envKey}`
       : "config file";
     throw new Error(
       `Provider "${meta.name}" requires an API key.\n` +
-        `Please configure it via: laozi config --provider ${meta.id} --api-key <key>\n` +
+        `Please configure it via: laozi config --api-key <key>\n` +
         `Or set the ${sources}.`
     );
   }
