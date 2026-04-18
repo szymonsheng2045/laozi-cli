@@ -37,31 +37,23 @@ async function animateExtraction(provider: Provider, text: string): Promise<Extr
   let current = 0;
   let stopped = false;
 
-  // Print first hint immediately
-  process.stdout.write(`  ${chalk.yellow("◌")} ${hints[0]}`);
+  // Print first hint
+  console.log(`  ${chalk.yellow("◌")} ${hints[0]}`);
 
   const interval = setInterval(() => {
     if (stopped) return;
     current = (current + 1) % hints.length;
-    // Clear current line and rewrite
-    readline.cursorTo(process.stdout, 0);
-    readline.clearLine(process.stdout, 0);
-    process.stdout.write(`  ${chalk.yellow("◌")} ${hints[current]}`);
+    console.log(`  ${chalk.yellow("◌")} ${hints[current]}`);
   }, 2500);
 
   try {
     const extraction = await extractStructured(provider, text);
     stopped = true;
     clearInterval(interval);
-    // Clear animation line
-    readline.cursorTo(process.stdout, 0);
-    readline.clearLine(process.stdout, 0);
     return extraction;
   } catch (err) {
     stopped = true;
     clearInterval(interval);
-    readline.cursorTo(process.stdout, 0);
-    readline.clearLine(process.stdout, 0);
     throw err;
   }
 }
@@ -86,12 +78,6 @@ export async function startREPL() {
     prompt: chalk.hex("#c9a961")("laozi ") + chalk.gray("> "),
     completer,
   });
-
-  // Show command list when user types just "/" and hits enter
-  const originalWrite = (rl as any)._writeToOutput;
-  (rl as any)._writeToOutput = function _writeToOutput(input: string) {
-    originalWrite.call(rl, input);
-  };
 
   const askQuestion = (q: string): Promise<string> => {
     return new Promise((resolve) => {

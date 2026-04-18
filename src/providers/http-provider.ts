@@ -48,7 +48,7 @@ export class HttpProvider implements Provider {
     } catch (err: any) {
       clearTimeout(timeout);
       if (err.name === "AbortError") {
-        throw new Error(`${this.meta.name} request timed out after 60s`);
+        throw new Error(`${this.meta.name} request timed out after 120s`);
       }
       throw err;
     }
