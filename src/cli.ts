@@ -60,7 +60,8 @@ program
   .option("--no-panel", "禁用多模型委员会，使用单模型")
   .action(async (text: string, options: { lang: string; panel?: boolean; noPanel?: boolean }) => {
     const config = loadConfig();
-    const usePanel = !options.noPanel && (options.panel || config.judgePanel.length > 0);
+    // --panel forces panel on; --no-panel forces panel off; default follows config
+    const usePanel = options.panel !== false && (options.panel === true || config.judgePanel.length > 0);
 
     // Step 1: Fact-check layer
     const fcSpinner = ora("正在判断是否需要联网核查...").start();
@@ -209,7 +210,8 @@ program
   .option("--no-panel", "禁用多模型委员会，使用单模型")
   .action(async (filepath: string, options: { lang: string; panel?: boolean; noPanel?: boolean }) => {
     const config = loadConfig();
-    const usePanel = !options.noPanel && (options.panel || config.judgePanel.length > 0);
+    // --panel forces panel on; --no-panel forces panel off; default follows config
+    const usePanel = options.panel !== false && (options.panel === true || config.judgePanel.length > 0);
 
     if (!existsSync(filepath)) {
       printError(`文件不存在: ${filepath}`);
