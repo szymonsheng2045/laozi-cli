@@ -35,25 +35,21 @@ async function safeExtract(provider: Provider, text: string): Promise<Extraction
     "正在整理结构化数据...",
   ];
 
+  const spinner = ora(hints[0]).start();
   let current = 0;
-  let stopped = false;
-
-  console.log(`  ${chalk.yellow("◌")} ${hints[0]}`);
-
   const interval = setInterval(() => {
-    if (stopped) return;
     current = (current + 1) % hints.length;
-    console.log(`  ${chalk.yellow("◌")} ${hints[current]}`);
+    spinner.text = hints[current];
   }, 2500);
 
   try {
     const extraction = await extractStructured(provider, text);
-    stopped = true;
     clearInterval(interval);
+    spinner.stop();
     return extraction;
   } catch (err) {
-    stopped = true;
     clearInterval(interval);
+    spinner.stop();
     throw err;
   }
 }
