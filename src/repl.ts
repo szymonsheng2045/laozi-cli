@@ -13,6 +13,59 @@ import { buildQuestions } from "./questioner.js";
 import { runFollowUp } from "./follow-up.js";
 import ora from "ora";
 
+const COMMANDS = ["/quit", "/exit", "/q", "/help", "/config", "/history", "/copy", "/done"];
+
+function completer(line: string): [string[], string] {
+  if (line.startsWith("/")) {
+    const hits = COMMANDS.filter((c) => c.startsWith(line));
+    if (hits.length === 0) return [[], line];
+    return [hits, line];
+  }
+  return [[], line];
+}
+
+async function animateExtraction(provider: Provider, text: string): Promise<Extraction> {
+  const hints = [
+    "正在识别信息类型...",
+    "正在提取声称的事实...",
+    "正在识别人物与机构...",
+    "正在检测操纵信号...",
+    "正在评估信息完整性...",
+    "正在整理结构化数据...",
+  ];
+
+  let current = 0;
+  let stopped = false;
+
+  // Print first hint immediately
+  process.stdout.write(`  ${chalk.yellow("◌")} ${hints[0]}`);
+
+  const interval = setInterval(() => {
+    if (stopped) return;
+    current = (current + 1) % hints.length;
+    // Clear current line and rewrite
+    readline.cursorTo(process.stdout, 0);
+    readline.clearLine(process.stdout, 0);
+    process.stdout.write(`  ${chalk.yellow("◌")} ${hints[current]}`);
+  }, 2500);
+
+  try {
+    const extraction = await extractStructured(provider, text);
+    stopped = true;
+    clearInterval(interval);
+    // Clear animation line
+    readline.cursorTo(process.stdout, 0);
+    readline.clearLine(process.stdout, 0);
+    return extraction;
+  } catch (err) {
+    stopped = true;
+    clearInterval(interval);
+    readline.cursorTo(process.stdout, 0);
+    readline.clearLine(process.stdout, 0);
+    throw err;
+  }
+}
+
 export async function startREPL() {
   const config = loadConfig();
   const usePanel = config.judgePanel.length > 0;
@@ -25,12 +78,20 @@ export async function startREPL() {
   let followUpRound = 0;
 
   console.log(chalk.hex("#c9a961")("\n欢迎来到 laozi.cli — 输入文字即可分析，输入 /quit 退出\n"));
+  console.log(chalk.gray("  提示：输入 / 后按 Tab 键可查看可用命令\n"));
 
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
     prompt: chalk.hex("#c9a961")("laozi ") + chalk.gray("> "),
+    completer,
   });
+
+  // Show command list when user types just "/" and hits enter
+  const originalWrite = (rl as any)._writeToOutput;
+  (rl as any)._writeToOutput = function _writeToOutput(input: string) {
+    originalWrite.call(rl, input);
+  };
 
   const askQuestion = (q: string): Promise<string> => {
     return new Promise((resolve) => {
@@ -44,6 +105,21 @@ export async function startREPL() {
 
   rl.on("line", async (input) => {
     const text = input.trim();
+
+    // Show command list if user typed just "/"
+    if (text === "/") {
+      console.log("");
+      console.log(chalk.bold("  可用命令 / Available Commands:"));
+      console.log(`  ${chalk.hex("#c9a961")("/quit")}     退出程序`);
+      console.log(`  ${chalk.hex("#c9a961")("/config")}   查看当前配置`);
+      console.log(`  ${chalk.hex("#c9a961")("/history")}  查看分析历史`);
+      console.log(`  ${chalk.hex("#c9a961")("/copy")}    复制最近一次结果到剪贴板`);
+      console.log(`  ${chalk.hex("#c9a961")("/done")}    结束追问，回到主分析模式`);
+      console.log("");
+      rl.prompt();
+      return;
+    }
+
     if (!text) {
       rl.prompt();
       return;
@@ -60,6 +136,7 @@ export async function startREPL() {
       console.log("  /history 查看分析历史");
       console.log("  /copy    复制最近一次分析结果到剪贴板");
       console.log("  /done    结束当前追问，回到主分析模式");
+      console.log("  提示：输入 / 后按 Tab 键可补全命令");
       console.log("");
       rl.prompt();
       return;
@@ -173,7 +250,7 @@ export async function startREPL() {
           return;
         }
 
-        // Step 2: Extract
+        // Step 2: Extract with animated hints
         printStage("正在提取结构化事实...", "◆");
         const firstResolved = resolveProvider(panelIds[0]);
         const firstProvider = createProvider({
@@ -182,7 +259,7 @@ export async function startREPL() {
           model: firstResolved.model,
         });
 
-        const extraction = await extractStructured(firstProvider, text);
+        const extraction = await animateExtraction(firstProvider, text);
         lastExtraction = extraction;
         console.log(`  ${chalk.green("✓")} 信息类型: ${extraction.message_type} · 声称: ${extraction.claims.length}条 · 缺口: ${extraction.gaps.length}个`);
 
