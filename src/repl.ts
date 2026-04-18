@@ -3,13 +3,13 @@ import chalk from "chalk";
 import { loadConfig } from "./config.js";
 import { createProvider, Provider } from "./providers/base.js";
 import { resolveProvider } from "./resolve-provider.js";
-import { printResult, printInfo, printError, printFactCheck } from "./printer.js";
+import { printResult, printInfo, printError, printFactCheck, printStage, printModelProgress } from "./printer.js";
 import { ensemble, runJudge } from "./judge.js";
 import { saveHistoryEntry } from "./history.js";
 import { runFactCheck } from "./fact-check.js";
 import { SessionMemory } from "./session.js";
 import { extractStructured } from "./extractor.js";
-import { buildQuestions, Question } from "./questioner.js";
+import { buildQuestions } from "./questioner.js";
 import ora from "ora";
 
 export async function startREPL() {
@@ -51,6 +51,7 @@ export async function startREPL() {
       console.log("  /quit    退出");
       console.log("  /config  查看当前配置");
       console.log("  /history 查看分析历史");
+      console.log("  /copy    复制最近一次分析结果到剪贴板");
       console.log("");
       rl.prompt();
       return;
@@ -77,12 +78,37 @@ export async function startREPL() {
       rl.prompt();
       return;
     }
+    if (text === "/copy") {
+      const { loadHistory } = await import("./history.js");
+      const history = loadHistory();
+      if (history.length === 0) {
+        printError("暂无历史记录可复制");
+      } else {
+        const entry = history[0];
+        const r = entry.result;
+        const textToCopy = `【laozi.cli 分析报告】
+可信度：${r.credibilityScore}/100 — ${r.verdict}
+疑点：${r.redFlags.map((f: any) => f.zh).join("；")}
+给老人：${r.elderExplanation.zh}
+建议：${r.actionSuggestion.zh}
+总结：${r.summary.zh}`;
+        try {
+          const { execSync } = await import("node:child_process");
+          execSync(`echo ${JSON.stringify(textToCopy)} | pbcopy`);
+          printInfo("分析结果已复制到剪贴板");
+        } catch {
+          printError("复制失败，请手动复制上方内容");
+        }
+      }
+      rl.prompt();
+      return;
+    }
 
     // Analyze the input
     try {
       session.pushUser(text);
 
-      // Step 1: Fact-check layer (optional web search)
+      // Step 1: Fact-check layer
       const fcSpinner = ora("正在判断是否需要联网核查...").start();
       const factCheck = await runFactCheck(text);
       fcSpinner.stop();
@@ -99,6 +125,7 @@ export async function startREPL() {
         }
 
         // Step 2: Extract structured facts using first provider
+        printStage("正在提取结构化事实...", "◆");
         const firstResolved = resolveProvider(panelIds[0]);
         const firstProvider = createProvider({
           provider: firstResolved.meta.id,
@@ -106,18 +133,18 @@ export async function startREPL() {
           model: firstResolved.model,
         });
 
-        const extractSpinner = ora("正在提取结构化事实...").start();
         const extraction = await extractStructured(firstProvider, text);
-        extractSpinner.stop();
+        console.log(`  ${chalk.green("✓")} 信息类型: ${extraction.message_type} · 声称: ${extraction.claims.length}条 · 缺口: ${extraction.gaps.length}个`);
 
         // Step 3: Ask follow-up questions if gaps exist
         let supplementary = "";
         if (extraction.gaps.length > 0) {
-          const qSpinner = ora("正在生成追问问题...").start();
+          const qsSpinner = ora("正在生成追问问题...").start();
           const questions = await buildQuestions(firstProvider, extraction);
-          qSpinner.stop();
+          qsSpinner.stop();
 
           if (questions.length > 0) {
+            printStage("需要补充一些信息", "?");
             const answers: string[] = [];
             for (const q of questions) {
               const a = await askQuestion(q.zh);
@@ -125,12 +152,13 @@ export async function startREPL() {
             }
             if (answers.length > 0) {
               supplementary = answers.join("\n\n");
+              console.log(`  ${chalk.green("✓")} 已收集 ${answers.length} 条补充信息\n`);
             }
           }
         }
 
-        // Step 4: Parallel judge
-        const spinner = ora(`正在启动 ${panelIds.length} 模型委员会分析...`).start();
+        // Step 4: Parallel judge with per-model progress
+        printStage(`启动 ${panelIds.length} 模型委员会分析`, "◆");
         const providers: Provider[] = [];
         for (const id of panelIds) {
           const resolved = resolveProvider(id);
@@ -139,25 +167,53 @@ export async function startREPL() {
 
         const searchCtx = factCheck.needed ? factCheck.summary : undefined;
         const sessionCtx = session.formatContext();
-        const votes = await Promise.all(
-          providers.map((p) =>
-            runJudge(p, text, extraction, supplementary || undefined, sessionCtx).catch((e) => {
-              return { provider: p.name, error: e.message || String(e) } as any;
-            })
-          )
+
+        const modelStatuses = new Map<string, "running" | "done" | "error">();
+        providers.forEach((p) => modelStatuses.set(p.name, "running"));
+
+        const refreshDisplay = () => {
+          // Clear previous lines and redraw
+          console.log(""); // spacer
+          providers.forEach((p) => {
+            printModelProgress(p.name, modelStatuses.get(p.name) || "running");
+          });
+        };
+
+        // Initial display
+        providers.forEach((p) => {
+          printModelProgress(p.name, "running");
+        });
+
+        const results = await Promise.all(
+          providers.map(async (p) => {
+            try {
+              const r = await runJudge(p, text, extraction, supplementary || undefined, sessionCtx);
+              modelStatuses.set(p.name, "done");
+              return r;
+            } catch (e: any) {
+              modelStatuses.set(p.name, "error");
+              return null;
+            }
+          })
         );
 
-        const validVotes = votes.filter((v) => !v.error);
-        if (validVotes.length === 0) {
-          spinner.stop();
-          printError("所有模型分析均失败。\n" + votes.map((v) => `${v.provider}: ${v.error}`).join("\n"));
+        // Redraw final status
+        console.log("");
+        providers.forEach((p) => {
+          printModelProgress(p.name, modelStatuses.get(p.name) || "running");
+        });
+        console.log("");
+
+        const validResults = results.filter((r): r is NonNullable<typeof r> => r !== null);
+        if (validResults.length === 0) {
+          printError("所有模型分析均失败。");
           rl.prompt();
           return;
         }
 
-        const result = ensemble(validVotes);
-        spinner.stop();
+        const result = ensemble(validResults);
         printResult(result, config.language);
+
         const assistantSummary = `判定：${result.verdict}，${result.credibilityScore}分，核心：${result.redFlags.map((f) => f.zh).join("；")}`;
         session.pushAssistant(assistantSummary);
         saveHistoryEntry({
@@ -171,8 +227,6 @@ export async function startREPL() {
         // Single-provider / rule-based mode
         const { provider } = await getSingleProvider();
         const spinner = ora("正在分析内容...").start();
-
-        // For rule-based we skip extraction and use old analyzer path
         const { analyzeContent } = await import("./analyzer.js");
         const result = await analyzeContent(provider, config, text);
         spinner.stop();

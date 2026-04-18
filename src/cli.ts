@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { existsSync, writeFileSync } from "node:fs";
+import chalk from "chalk";
 import ora from "ora";
 import { analyzeContent, AnalysisResult } from "./analyzer.js";
 import { createProvider, Provider } from "./providers/base.js";
 import { listProviders } from "./providers/registry.js";
 import { loadConfig, saveConfig, configPathDisplay } from "./config.js";
-import { printError, printInfo, printResult, printFactCheck } from "./printer.js";
+import { printError, printInfo, printResult, printFactCheck, printStage, printModelProgress } from "./printer.js";
 import { transcribeAudio } from "./transcribe.js";
 import { clearHistory, formatHistoryPreview, loadHistory, saveHistoryEntry } from "./history.js";
 import { printBanner } from "./banner.js";
@@ -79,6 +80,7 @@ program
       }
 
       // Step 2: Extract structured facts using first provider
+      printStage("正在提取结构化事实...", "◆");
       const firstResolved = resolveProvider(panelIds[0]);
       const firstProvider = createProvider({
         provider: firstResolved.meta.id,
@@ -86,9 +88,8 @@ program
         model: firstResolved.model,
       });
 
-      const extractSpinner = ora("正在提取结构化事实...").start();
       const extraction = await extractStructured(firstProvider, text);
-      extractSpinner.stop();
+      console.log(`  ${chalk.green("✓")} 信息类型: ${extraction.message_type} · 声称: ${extraction.claims.length}条 · 缺口: ${extraction.gaps.length}个`);
 
       // Step 3: Ask follow-up questions (skip in non-TTY batch mode)
       let supplementary = "";
@@ -98,11 +99,11 @@ program
         qSpinner.stop();
 
         if (questions.length > 0) {
-          printInfo("消息里缺了一些关键信息，需要您补充一下：");
+          printStage("需要补充一些信息", "?");
           const readline = await import("node:readline");
           const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
           const ask = (q: string): Promise<string> =>
-            new Promise((resolve) => rl.question(`  ${q} `, (a) => resolve(a.trim())));
+            new Promise((resolve) => rl.question(`  ${q} `, (a: string) => resolve(a.trim())));
 
           const answers: string[] = [];
           for (const q of questions) {
@@ -110,12 +111,15 @@ program
             if (a) answers.push(`${q.zh}\n回答: ${a}`);
           }
           rl.close();
-          if (answers.length > 0) supplementary = answers.join("\n\n");
+          if (answers.length > 0) {
+            supplementary = answers.join("\n\n");
+            console.log(`  ${chalk.green("✓")} 已收集 ${answers.length} 条补充信息\n`);
+          }
         }
       }
 
-      // Step 4: Parallel judge
-      const spinner = ora(`正在启动 ${panelIds.length} 模型委员会分析...`).start();
+      // Step 4: Parallel judge with per-model progress
+      printStage(`启动 ${panelIds.length} 模型委员会分析`, "◆");
       try {
         const providers: Provider[] = [];
         for (const id of panelIds) {
@@ -124,23 +128,41 @@ program
         }
 
         const searchCtx = factCheck.needed ? factCheck.summary : undefined;
-        const votes = await Promise.all(
-          providers.map((p) =>
-            runJudge(p, text, extraction, supplementary || undefined, undefined).catch((e: any) => {
-              return { provider: p.name, error: e.message || String(e) } as any;
-            })
-          )
+        const modelStatuses = new Map<string, "running" | "done" | "error">();
+        providers.forEach((p) => modelStatuses.set(p.name, "running"));
+
+        // Initial display
+        providers.forEach((p) => {
+          printModelProgress(p.name, "running");
+        });
+
+        const results = await Promise.all(
+          providers.map(async (p) => {
+            try {
+              const r = await runJudge(p, text, extraction, supplementary || undefined, undefined);
+              modelStatuses.set(p.name, "done");
+              return r;
+            } catch (e: any) {
+              modelStatuses.set(p.name, "error");
+              return null;
+            }
+          })
         );
 
-        const validVotes = votes.filter((v: any) => !v.error);
-        if (validVotes.length === 0) {
-          spinner.stop();
-          printError("所有模型分析均失败。\n" + votes.map((v: any) => `${v.provider}: ${v.error}`).join("\n"));
+        // Redraw final status
+        console.log("");
+        providers.forEach((p) => {
+          printModelProgress(p.name, modelStatuses.get(p.name) || "running");
+        });
+        console.log("");
+
+        const validResults = results.filter((r): r is NonNullable<typeof r> => r !== null);
+        if (validResults.length === 0) {
+          printError("所有模型分析均失败。");
           process.exit(1);
         }
 
-        const result = ensemble(validVotes);
-        spinner.stop();
+        const result = ensemble(validResults);
         printResult(result, options.lang || config.language);
         saveHistoryEntry({
           id: Math.random().toString(36).slice(2),
@@ -150,7 +172,6 @@ program
           result,
         });
       } catch (err: any) {
-        spinner.stop();
         printError(err.message || String(err));
         process.exit(1);
       }
