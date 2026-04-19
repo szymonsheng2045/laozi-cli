@@ -218,15 +218,16 @@ export async function startREPL() {
       lastOriginalText = text;
 
       // Step 1: Fact-check layer (REPL 禁用 ora，避免 readline 冲突)
+      console.log("  ◆ 分析开始...");
       let factCheck = { needed: false as boolean, query: "", results: [] as { title: string; url: string; snippet: string }[], summary: "" };
       try {
-        console.log("  ◇ 核查相关背景信息...");
         factCheck = await runFactCheck(text);
         if (factCheck.needed) {
           printFactCheck(factCheck.query, factCheck.results);
         }
+        console.log("  ◆   [1/4] 事实核查... ✓");
       } catch {
-        // Graceful fallback: continue without fact-check
+        console.log("  ◆   [1/4] 事实核查... -");
       }
 
       if (usePanel) {
@@ -238,7 +239,6 @@ export async function startREPL() {
         }
 
         // Step 2: Extract
-        printStage("正在提取结构化事实...", "◆");
         let firstProvider: Provider;
         let extraction: Extraction;
         try {
@@ -249,25 +249,30 @@ export async function startREPL() {
             model: firstResolved.model,
           });
           extraction = await safeExtract(firstProvider, text);
+          console.log("  ◆   [2/4] 结构化提取... ✓");
+          console.log(`        信息类型: ${extraction.message_type} · 声称: ${extraction.claims.length}条 · 缺口: ${extraction.gaps.length}个`);
         } catch (extractErr: unknown) {
+          console.log("  ◆   [2/4] 结构化提取... ✗");
           const msg = extractErr instanceof Error ? extractErr.message : String(extractErr);
-          printError(`结构化提取失败: ${msg}`);
+          printError(`提取失败: ${msg}`);
           printInfo("正在 fallback 到本地规则引擎...");
-          const { provider } = await getSingleProvider();
-          const result = await analyzeContent(provider, config, text);
-          printResult(result, config.language);
+          try {
+            const { provider } = await getSingleProvider();
+            const result = await analyzeContent(provider, config, text);
+            printResult(result, config.language);
+          } catch {
+            printError("本地规则引擎也无法启动。");
+          }
           isAnalyzing = false;
           rl.prompt();
           return;
         }
 
         lastExtraction = extraction;
-        console.log(`  ${chalk.green("✓")} 信息类型: ${extraction.message_type} · 声称: ${extraction.claims.length}条 · 缺口: ${extraction.gaps.length}个`);
 
         // Step 3: Ask follow-up questions
         let supplementary = "";
         if (extraction.gaps.length > 0) {
-          console.log("  ◆ 正在生成追问问题...");
           let questions: import("./questioner.js").Question[] = [];
           try {
             questions = await buildQuestions(firstProvider!, extraction);
@@ -276,6 +281,7 @@ export async function startREPL() {
           }
 
           if (questions.length > 0) {
+            console.log("  ◆   [3/4] 追问生成... ✓");
             printStage("需要补充一些信息", "?");
             const answers: string[] = [];
             for (const q of questions) {
@@ -286,11 +292,15 @@ export async function startREPL() {
               supplementary = answers.join("\n\n");
               console.log(`  ${chalk.green("✓")} 已收集 ${answers.length} 条补充信息\n`);
             }
+          } else {
+            console.log("  ◆   [3/4] 追问生成... - (无需追问)");
           }
+        } else {
+          console.log("  ◆   [3/4] 追问生成... - (无信息缺口)");
         }
 
         // Step 4: Parallel judge
-        printStage(`启动 ${panelIds.length} 模型委员会分析`, "◆");
+        console.log(`  ◆   [4/4] 多模型裁决... (${panelIds.length} 模型并行)`);
         const providers: Provider[] = [];
         for (const id of panelIds) {
           try {
@@ -369,7 +379,7 @@ export async function startREPL() {
         console.log(chalk.hex("#c9a961")("  ★ 分析完成。您可以继续追问（最多5轮），或输入 /done 结束\n"));
       } else {
         // Single-provider / rule-based mode
-        console.log("  ◆ 正在分析内容...");
+        console.log("  ◆   [2/4] 规则引擎分析... ✓ (本地模式)");
         let provider: Provider;
         try {
           const resolved = await getSingleProvider();
@@ -382,6 +392,7 @@ export async function startREPL() {
           return;
         }
         const result = await analyzeContent(provider, config, text);
+        console.log("  ◆   [4/4] 裁决完成... ✓");
         printResult(result, config.language);
         const assistantSummary = `判定：${result.verdict}，${result.credibilityScore}分，核心：${result.redFlags.map((f: { zh: string }) => f.zh).join("；")}`;
         session.pushAssistant(assistantSummary);
