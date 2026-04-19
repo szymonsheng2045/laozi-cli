@@ -25,6 +25,22 @@ function completer(line: string): [string[], string] {
   return [[], line];
 }
 
+// Simple stderr spinner — does NOT interfere with readline stdout
+function createSpinner(label: string) {
+  const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+  let i = 0;
+  const interval = setInterval(() => {
+    process.stderr.write(`\r  ${frames[i]} ${label}`);
+    i = (i + 1) % frames.length;
+  }, 100);
+  return {
+    stop: () => {
+      clearInterval(interval);
+      process.stderr.write(`\r${" ".repeat(label.length + 6)}\r`);
+    },
+  };
+}
+
 async function safeExtract(provider: Provider, text: string): Promise<Extraction> {
   // REPL 模式下禁用 ora spinner，避免与 readline 冲突导致追问异常退出
   // 调用方已通过 printStage 打印提示，此处静默执行
@@ -218,21 +234,23 @@ export async function startREPL() {
       lastOriginalText = text;
 
       // Step 1: Fact-check layer (REPL 禁用 ora，避免 readline 冲突)
-      console.log("  ◆ 分析开始...");
+      let spinner = createSpinner("分析中...");
       let factCheck = { needed: false as boolean, query: "", results: [] as { title: string; url: string; snippet: string }[], summary: "" };
       try {
         factCheck = await runFactCheck(text);
         if (factCheck.needed) {
+          spinner.stop();
           printFactCheck(factCheck.query, factCheck.results);
+          spinner = createSpinner("分析中...");
         }
-        console.log("  ◆   [1/4] 事实核查... ✓");
       } catch {
-        console.log("  ◆   [1/4] 事实核查... -");
+        // Graceful fallback: continue without fact-check
       }
 
       if (usePanel) {
         const panelIds = config.judgePanel;
         if (panelIds.length === 1 && panelIds[0] === "rule-based") {
+          spinner.stop();
           printError("多模型委员会模式需要配置至少一个 API provider。\n示例: laozi config --judge-panel qwen,kimi,zhipu,minimax");
           rl.prompt();
           return;
@@ -252,6 +270,7 @@ export async function startREPL() {
           console.log("  ◆   [2/4] 结构化提取... ✓");
           console.log(`        信息类型: ${extraction.message_type} · 声称: ${extraction.claims.length}条 · 缺口: ${extraction.gaps.length}个`);
         } catch (extractErr: unknown) {
+          spinner.stop();
           console.log("  ◆   [2/4] 结构化提取... ✗");
           const msg = extractErr instanceof Error ? extractErr.message : String(extractErr);
           printError(`提取失败: ${msg}`);
@@ -312,6 +331,7 @@ export async function startREPL() {
         }
 
         if (providers.length === 0) {
+          spinner.stop();
           printError("所有模型配置均不可用，fallback 到本地规则引擎。");
           const { provider } = await getSingleProvider();
           const result = await analyzeContent(provider, config, text);
@@ -351,6 +371,7 @@ export async function startREPL() {
         const validResults = results.filter((r): r is NonNullable<typeof r> => r !== null);
 
         if (validResults.length === 0) {
+          spinner.stop();
           printError("所有模型分析均失败，fallback 到本地规则引擎。");
           const { provider } = await getSingleProvider();
           const result = await analyzeContent(provider, config, text);
@@ -362,6 +383,7 @@ export async function startREPL() {
 
         const result = ensemble(validResults);
         lastResult = result;
+        spinner.stop();
         printResult(result, config.language);
 
         const assistantSummary = `判定：${result.verdict}，${result.credibilityScore}分，核心：${result.redFlags.map((f) => f.zh).join("；")}`;
@@ -386,12 +408,14 @@ export async function startREPL() {
           provider = resolved.provider;
         } catch (resolveErr: unknown) {
           const msg = resolveErr instanceof Error ? resolveErr.message : String(resolveErr);
+          spinner.stop();
           printError(msg);
           isAnalyzing = false;
           rl.prompt();
           return;
         }
         const result = await analyzeContent(provider, config, text);
+        spinner.stop();
         console.log("  ◆   [4/4] 裁决完成... ✓");
         printResult(result, config.language);
         const assistantSummary = `判定：${result.verdict}，${result.credibilityScore}分，核心：${result.redFlags.map((f: { zh: string }) => f.zh).join("；")}`;
