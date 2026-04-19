@@ -1,0 +1,240 @@
+[
+  {
+    "i": 75,
+    "cat": "misinformation",
+    "text": "拍打拉筋可以治愈癌症和糖尿病",
+    "score": 15,
+    "verdict": "misinformation",
+    "flags": 3,
+    "ok": true,
+    "elapsed": "155.5"
+  },
+  {
+    "i": 76,
+    "cat": "misinformation",
+    "text": "吃大量海带可以防核辐射",
+    "score": 50,
+    "verdict": "suspicious",
+    "flags": 4,
+    "ok": true,
+    "elapsed": "148.4"
+  },
+  {
+    "i": 77,
+    "cat": "misinformation",
+    "text": "非典时期抢盐防辐射",
+    "score": 25,
+    "verdict": "misinformation",
+    "flags": 0,
+    "ok": true,
+    "elapsed": "115.0"
+  },
+  {
+    "i": 78,
+    "cat": "misinformation",
+    "text": "板蓝根可以预防非典和新冠",
+    "score": 25,
+    "verdict": "misinformation",
+    "flags": 0,
+    "ok": true,
+    "elapsed": "183.0"
+  },
+  {
+    "i": 79,
+    "cat": "misinformation",
+    "text": "双黄连口服液可以预防新冠病毒",
+    "score": 25,
+    "verdict": "misinformation",
+    "flags": 3,
+    "ok": true,
+    "elapsed": "122.8"
+  },
+  {
+    "i": 80,
+    "cat": "misinformation",
+    "text": "吸烟可以预防感染新冠病毒",
+    "score": 15,
+    "verdict": "misinformation",
+    "flags": 2,
+    "ok": true,
+    "elapsed": "166.9"
+  },
+  {
+    "i": 81,
+    "cat": "misinformation",
+    "text": "喝漂白水可以治疗新冠肺炎",
+    "score": 10,
+    "verdict": "misinformation",
+    "flags": 0,
+    "ok": true,
+    "elapsed": "119.9"
+  },
+  {
+    "i": 82,
+    "cat": "misinformation",
+    "text": "天线宝宝动画片是在给儿童洗脑",
+    "score": 30,
+    "verdict": "misinformation",
+    "flags": 3,
+    "ok": true,
+    "elapsed": "134.7"
+  },
+  {
+    "i": 83,
+    "cat": "misinformation",
+    "text": "月球背面有外星人的基地",
+    "score": 20,
+    "verdict": "misinformation",
+    "flags": 3,
+    "ok": true,
+    "elapsed": "153.1"
+  },
+  {
+    "i": 84,
+    "cat": "misinformation",
+    "text": "地球是平的，宇航员的照片都是假的",
+    "score": 15,
+    "verdict": "misinformation",
+    "flags": 3,
+    "ok": true,
+    "elapsed": "124.6"
+  },
+  {
+    "i": 85,
+    "cat": "misinformation",
+    "text": "美国登月是骗局，是在摄影棚里拍的",
+    "error": "fetch failed",
+    "ok": false
+  },
+  {
+    "i": 86,
+    "cat": "misinformation",
+    "text": "911恐怖袭击是美国政府自导自演的",
+    "score": 20,
+    "verdict": "misinformation",
+    "flags": 3,
+    "ok": true,
+    "elapsed": "163.9"
+  },
+  {
+    "i": 87,
+    "cat": "misinformation",
+    "text": "新冠病毒是中国实验室故意制造的生物武器",
+    "score": 15,
+    "verdict": "misinformation",
+    "flags": 0,
+    "ok": true,
+    "elapsed": "172.1"
+  },
+  {
+    "i": 88,
+    "cat": "misinformation",
+    "text": "艾滋病是美国军方制造的种族灭绝武器",
+    "score": 15,
+    "verdict": "misinformation",
+    "flags": 3,
+    "ok": true,
+    "elapsed": "196.2"
+  },
+  {
+    "i": 89,
+    "cat": "boundary",
+    "text": "我妈说专家讲牛奶不能和鸡蛋一起吃，会生病",
+    "score": 25,
+    "verdict": "misinformation",
+    "flags": 3,
+    "ok": true,
+    "elapsed": "163.0"
+  },
+  {
+    "i": 90,
+    "cat": "boundary",
+    "text": "我爸听战友说有一种药可以完全治好糖尿病，不用再打针",
+    "score": 20,
+    "verdict": "misinformation",
+    "flags": 0,
+    "ok": true,
+    "elapsed": "207.7"
+  },
+  {
+    "i": 91,
+    "cat": "boundary",
+    "text": "微信群里发了一个链接说免费领取鸡蛋，填个人信息就行",
+    "score": 5,
+    "verdict": "scam",
+    "flags": 4,
+    "ok": true,
+    "elapsed": "181.7"
+  },
+  {
+    "i": 92,
+    "cat": "boundary",
+    "text": "邻居说最近又出了新的流感病毒变异，特别厉害，赶紧囤药",
+    "score": 55,
+    "verdict": "suspicious",
+    "flags": 3,
+    "ok": true,
+    "elapsed": "150.1"
+  },
+  {
+    "i": 93,
+    "cat": "boundary",
+    "text": "电视广告上说有一种进口保健品吃了可以治好老年痴呆",
+    "error": "fetch failed",
+    "ok": false
+  },
+  {
+    "i": 94,
+    "cat": "boundary",
+    "text": "我姑说多喝茶可以降血压，降压药可以慢慢停掉",
+    "error": "fetch failed",
+    "ok": false
+  },
+  {
+    "i": 95,
+    "cat": "boundary",
+    "text": "小区群里有人说要赶紧交社保补缴费，不然养老金要断了，还附了一个链接",
+    "error": "fetch failed",
+    "ok": false
+  },
+  {
+    "i": 96,
+    "cat": "boundary",
+    "text": "老人接到电话说中了一等奖，要先交手续费才能领奖",
+    "score": 0,
+    "verdict": "scam",
+    "flags": 0,
+    "ok": true,
+    "elapsed": "181.5"
+  },
+  {
+    "i": 97,
+    "cat": "boundary",
+    "text": "我姨说有一种进口精油抹在关节上可以治好关节炎",
+    "score": 35,
+    "verdict": "misinformation",
+    "flags": 4,
+    "ok": true,
+    "elapsed": "158.9"
+  },
+  {
+    "i": 98,
+    "cat": "boundary",
+    "text": "我爸说最近看短视频说味精是化学合成的，吃了会致癌，家里不能再吃了",
+    "score": 50,
+    "verdict": "suspicious",
+    "flags": 3,
+    "ok": true,
+    "elapsed": "171.9"
+  },
+  {
+    "i": 99,
+    "cat": "factual",
+    "text": "长期睡眠不足会影响免疫力",
+    "score": 90,
+    "verdict": "safe",
+    "flags": 0,
+    "ok": true,
+    "elapsed": "154.0"
+  }
+]

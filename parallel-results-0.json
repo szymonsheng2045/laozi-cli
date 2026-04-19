@@ -1,0 +1,195 @@
+[
+  {
+    "i": 0,
+    "cat": "factual",
+    "text": "坚持适度运动可以降低血压",
+    "score": 50,
+    "verdict": "suspicious",
+    "flags": 0,
+    "ok": true,
+    "elapsed": "134.4"
+  },
+  {
+    "i": 1,
+    "cat": "factual",
+    "text": "吸烟有害健康，会增加肺癌风险",
+    "score": 95,
+    "verdict": "safe",
+    "flags": 0,
+    "ok": true,
+    "elapsed": "65.8"
+  },
+  {
+    "i": 2,
+    "cat": "factual",
+    "text": "老年人应该每年做一次全面体检",
+    "score": 50,
+    "verdict": "suspicious",
+    "flags": 0,
+    "ok": true,
+    "elapsed": "147.6"
+  },
+  {
+    "i": 3,
+    "cat": "factual",
+    "text": "饭后散步有助于消化吸收",
+    "score": 50,
+    "verdict": "suspicious",
+    "flags": 0,
+    "ok": true,
+    "elapsed": "113.6"
+  },
+  {
+    "i": 4,
+    "cat": "factual",
+    "text": "勤洗手可以预防流感等传染性疾病",
+    "score": 50,
+    "verdict": "suspicious",
+    "flags": 0,
+    "ok": true,
+    "elapsed": "101.1"
+  },
+  {
+    "i": 5,
+    "cat": "factual",
+    "text": "北京是中华人民共和国的首都",
+    "score": 100,
+    "verdict": "safe",
+    "flags": 0,
+    "ok": true,
+    "elapsed": "118.2"
+  },
+  {
+    "i": 6,
+    "cat": "factual",
+    "text": "看手机时间过长容易导致眼睛疲劳",
+    "error": "通义千问 (Qwen) error (429): {\"error\":{\"code\":\"throttling\",\"message\":\"concurrency allocated quota exceeded. please try again later.\",\"param\":null,\"type\":\"invalid_request_error\"},\"request_id\":\"8bcdc92d-a41d-99b4-9bb4-a86ee5d03db4\"}",
+    "ok": false
+  },
+  {
+    "i": 7,
+    "cat": "factual",
+    "text": "过马路要走斑马线，遵守交通规则",
+    "error": "通义千问 (Qwen) error (429): {\"error\":{\"code\":\"throttling\",\"message\":\"concurrency allocated quota exceeded. please try again later.\",\"param\":null,\"type\":\"invalid_request_error\"},\"request_id\":\"89f6c174-9baf-95ca-864d-336f1fe47315\"}",
+    "ok": false
+  },
+  {
+    "i": 8,
+    "cat": "factual",
+    "text": "夏天高温天气要多喝水预防中暑",
+    "error": "通义千问 (Qwen) error (429): {\"error\":{\"code\":\"throttling\",\"message\":\"concurrency allocated quota exceeded. please try again later.\",\"param\":null,\"type\":\"invalid_request_error\"},\"request_id\":\"7327f063-0c5b-9229-972a-e9b2613fdc42\"}",
+    "ok": false
+  },
+  {
+    "i": 9,
+    "cat": "factual",
+    "text": "剩饭剩菜需要彻底加热后再食用",
+    "error": "通义千问 (Qwen) error (429): {\"error\":{\"code\":\"throttling\",\"message\":\"concurrency allocated quota exceeded. please try again later.\",\"param\":null,\"type\":\"invalid_request_error\"},\"request_id\":\"c6aa8884-21a0-944d-b1e3-0826c0f1b9e3\"}",
+    "ok": false
+  },
+  {
+    "i": 10,
+    "cat": "factual",
+    "text": "适当晒太阳可以帮助身体合成维生素D",
+    "error": "通义千问 (Qwen) error (429): {\"error\":{\"code\":\"throttling\",\"message\":\"concurrency allocated quota exceeded. please try again later.\",\"param\":null,\"type\":\"invalid_request_error\"},\"request_id\":\"36670918-3032-9ea3-ba2c-d331d924c60f\"}",
+    "ok": false
+  },
+  {
+    "i": 11,
+    "cat": "factual",
+    "text": "高血压患者应该控制食盐摄入量",
+    "error": "通义千问 (Qwen) error (429): {\"error\":{\"code\":\"throttling\",\"message\":\"concurrency allocated quota exceeded. please try again later.\",\"param\":null,\"type\":\"invalid_request_error\"},\"request_id\":\"30fbfbde-7e6f-90d8-ba4b-17aa5753a450\"}",
+    "ok": false
+  },
+  {
+    "i": 12,
+    "cat": "factual",
+    "text": "骨质疏松的老年人需要适当补钙",
+    "error": "通义千问 (Qwen) error (429): {\"error\":{\"code\":\"throttling\",\"message\":\"concurrency allocated quota exceeded. please try again later.\",\"param\":null,\"type\":\"invalid_request_error\"},\"request_id\":\"b02a475d-e91c-9f6b-a2b3-d9aec543b053\"}",
+    "ok": false
+  },
+  {
+    "i": 13,
+    "cat": "factual",
+    "text": "流感季节外出佩戴口罩可以减少感染风险",
+    "error": "通义千问 (Qwen) error (429): {\"error\":{\"code\":\"throttling\",\"message\":\"concurrency allocated quota exceeded. please try again later.\",\"param\":null,\"type\":\"invalid_request_error\"},\"request_id\":\"a0fbb430-cf15-9f1d-a992-8d8509ccc8db\"}",
+    "ok": false
+  },
+  {
+    "i": 14,
+    "cat": "factual",
+    "text": "每天保证七到八小时的睡眠对健康有益",
+    "error": "通义千问 (Qwen) error (429): {\"error\":{\"code\":\"throttling\",\"message\":\"concurrency allocated quota exceeded. please try again later.\",\"param\":null,\"type\":\"invalid_request_error\"},\"request_id\":\"0c6b7864-a3ee-9633-bf2d-116a1d5fb9d3\"}",
+    "ok": false
+  },
+  {
+    "i": 15,
+    "cat": "factual",
+    "text": "多吃蔬菜水果有助于补充维生素和膳食纤维",
+    "error": "通义千问 (Qwen) error (429): {\"error\":{\"code\":\"throttling\",\"message\":\"concurrency allocated quota exceeded. please try again later.\",\"param\":null,\"type\":\"invalid_request_error\"},\"request_id\":\"0a1b4fac-9e0e-9d11-b830-b104d9842cc1\"}",
+    "ok": false
+  },
+  {
+    "i": 16,
+    "cat": "factual",
+    "text": "定期开窗通风可以保持室内空气清新",
+    "error": "通义千问 (Qwen) error (429): {\"error\":{\"code\":\"throttling\",\"message\":\"concurrency allocated quota exceeded. please try again later.\",\"param\":null,\"type\":\"invalid_request_error\"},\"request_id\":\"c1ed737b-2694-93c7-b7cd-cdb32a48a643\"}",
+    "ok": false
+  },
+  {
+    "i": 17,
+    "cat": "factual",
+    "text": "喝足够的水有助于身体新陈代谢",
+    "error": "通义千问 (Qwen) error (429): {\"error\":{\"code\":\"throttling\",\"message\":\"concurrency allocated quota exceeded. please try again later.\",\"param\":null,\"type\":\"invalid_request_error\"},\"request_id\":\"04ccfc08-b2d4-9f80-b67c-f9b581149f3f\"}",
+    "ok": false
+  },
+  {
+    "i": 18,
+    "cat": "factual",
+    "text": "情绪激动时血压会升高，老人要注意平复心情",
+    "error": "通义千问 (Qwen) error (429): {\"error\":{\"code\":\"throttling\",\"message\":\"concurrency allocated quota exceeded. please try again later.\",\"param\":null,\"type\":\"invalid_request_error\"},\"request_id\":\"e9fd9f24-07fd-9a26-b1ec-0f49998220fe\"}",
+    "ok": false
+  },
+  {
+    "i": 19,
+    "cat": "factual",
+    "text": "疫苗接种是预防传染病的有效手段",
+    "error": "通义千问 (Qwen) error (429): {\"error\":{\"code\":\"throttling\",\"message\":\"concurrency allocated quota exceeded. please try again later.\",\"param\":null,\"type\":\"invalid_request_error\"},\"request_id\":\"e65e3212-552b-94e9-bb29-35a493cd9c47\"}",
+    "ok": false
+  },
+  {
+    "i": 20,
+    "cat": "factual",
+    "text": "定期刷牙可以预防龋齿和牙周病",
+    "error": "通义千问 (Qwen) error (429): {\"error\":{\"code\":\"throttling\",\"message\":\"concurrency allocated quota exceeded. please try again later.\",\"param\":null,\"type\":\"invalid_request_error\"},\"request_id\":\"8501e0d0-6e9d-9591-9216-1e9e3260bf37\"}",
+    "ok": false
+  },
+  {
+    "i": 21,
+    "cat": "factual",
+    "text": "安全带可以在交通事故中保护生命安全",
+    "error": "通义千问 (Qwen) error (429): {\"error\":{\"code\":\"throttling\",\"message\":\"concurrency allocated quota exceeded. please try again later.\",\"param\":null,\"type\":\"invalid_request_error\"},\"request_id\":\"14dcf7e8-2719-93fc-b0da-b5a82d0ed01a\"}",
+    "ok": false
+  },
+  {
+    "i": 22,
+    "cat": "factual",
+    "text": "药品有保质期，过期药品不能服用",
+    "error": "通义千问 (Qwen) error (429): {\"error\":{\"code\":\"throttling\",\"message\":\"concurrency allocated quota exceeded. please try again later.\",\"param\":null,\"type\":\"invalid_request_error\"},\"request_id\":\"cf1a706f-1a7a-9539-8265-4a3ad0f75b28\"}",
+    "ok": false
+  },
+  {
+    "i": 23,
+    "cat": "factual",
+    "text": "燃气泄漏时要立即开窗通风，不能开关电器",
+    "error": "通义千问 (Qwen) error (429): {\"error\":{\"code\":\"throttling\",\"message\":\"concurrency allocated quota exceeded. please try again later.\",\"param\":null,\"type\":\"invalid_request_error\"},\"request_id\":\"2e4ff5c6-f33c-9541-a6fa-41e1c3019ac4\"}",
+    "ok": false
+  },
+  {
+    "i": 24,
+    "cat": "factual",
+    "text": "发生火灾时要用湿毛巾捂住口鼻弯腰逃生",
+    "error": "通义千问 (Qwen) error (429): {\"error\":{\"code\":\"throttling\",\"message\":\"concurrency allocated quota exceeded. please try again later.\",\"param\":null,\"type\":\"invalid_request_error\"},\"request_id\":\"f3caf79d-ea19-9821-803a-d31a47bca0de\"}",
+    "ok": false
+  }
+]

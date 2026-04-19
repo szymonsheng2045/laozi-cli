@@ -1,0 +1,32 @@
+📊 laozi-cli 100轮批量测试报告
+
+【factual】平均=87.2分, n=30, 判定={'suspicious': 4, 'safe': 26}
+【exaggerated】平均=41.4分, n=30, 判定={'suspicious': 15, 'misinformation': 15}
+【misinformation】平均=22.8分, n=30, 判定={'misinformation': 28, 'suspicious': 2}
+【boundary】平均=23.5分, n=10, 判定={'misinformation': 5, 'scam': 3, 'suspicious': 2}
+
+📈 准确率统计:
+整体准确率: 69/90 = 76.7%
+
+❌ 明显误判:
+  [factual过低]  50分 | 坚持适度运动可以降低血压
+  [factual过低]  50分 | 老年人应该每年做一次全面体检
+  [factual过低]  50分 | 饭后散步有助于消化吸收
+  [factual过低]  50分 | 勤洗手可以预防流感等传染性疾病
+  [exaggerated过低]  35分 | 隔夜菜会产生亚硝酸盐，吃了会致癌
+  [exaggerated过低]  25分 | 味精吃多了会掉头发，还会变笨
+  [exaggerated过低]  25分 | 味精是化学合成的，吃了对身体有害
+  [exaggerated过低]  25分 | 自来水里有氯，烧开后也不能喝
+  [exaggerated过低]  25分 | 方便面是垃圾食品，吃一次要排毒一个月
+  [exaggerated过低]  35分 | 骨头汤补钙效果最好，多喝骨头汤
+  [exaggerated过低]  25分 | 螃蟹和柿子一起吃会中毒死亡
+  [misinformation过高]  50分 | 吃大量海带可以防核辐射
+  [exaggerated过低]  25分 | 牛奶和鸡蛋不能一起吃，会中毒
+  [exaggerated过低]  35分 | 手机辐射太大，放床头会得脑癌
+  [exaggerated过低]  35分 | 空腹不能吃香蕉，对心脏不好
+  [exaggerated过低]  28分 | 每天喝红酒可以软化血管，预防心脏病
+  [exaggerated过低]  20分 | 每天喝醋可以清理血管里的垃圾
+  [exaggerated过低]  25分 | 大蒜生吃可以杀死体内的所有细菌
+  [exaggerated过低]  20分 | 芹菜是降压神菜，吃了不用吃降压药
+  [exaggerated过低]  25分 | 戴眼镜会让近视度数越来越深
+  [misinformation过高]  65分 | 淋巴排毒按摩可以排出体内毒素
