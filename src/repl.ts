@@ -27,7 +27,7 @@ function completer(line: string): [string[], string] {
 
 async function safeExtract(provider: Provider, text: string): Promise<Extraction> {
   // REPL 模式下禁用 ora spinner，避免与 readline 冲突导致追问异常退出
-  console.log("  ◆ 正在提取结构化事实...");
+  // 调用方已通过 printStage 打印提示，此处静默执行
   return extractStructured(provider, text);
 }
 
@@ -220,7 +220,7 @@ export async function startREPL() {
       // Step 1: Fact-check layer (REPL 禁用 ora，避免 readline 冲突)
       let factCheck = { needed: false as boolean, query: "", results: [] as { title: string; url: string; snippet: string }[], summary: "" };
       try {
-        console.log("  ◆ 正在判断是否需要联网核查...");
+        console.log("  ◇ 核查相关背景信息...");
         factCheck = await runFactCheck(text);
         if (factCheck.needed) {
           printFactCheck(factCheck.query, factCheck.results);
