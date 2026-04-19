@@ -8,3 +8,13 @@ coverage/
 .vscode/
 .idea/
 *.tsbuildinfo
+
+# Test artifacts
+parallel-results-*.json
+retry-results-*.json
+merged-results.json
+direct-results.json
+test-report.txt
+test-run.log
+parallel-*.log
+retry-*.log
