@@ -12,7 +12,7 @@ import { extractStructured, Extraction } from "./extractor.js";
 import { buildQuestions } from "./questioner.js";
 import { runFollowUp } from "./follow-up.js";
 import { analyzeContent } from "./analyzer.js";
-import ora from "ora";
+// Note: ora spinner disabled in REPL mode to avoid readline conflicts
 
 const COMMANDS = ["/quit", "/exit", "/q", "/help", "/config", "/history", "/copy", "/done", "/cancel"];
 
@@ -26,32 +26,9 @@ function completer(line: string): [string[], string] {
 }
 
 async function safeExtract(provider: Provider, text: string): Promise<Extraction> {
-  const hints = [
-    "正在识别信息类型...",
-    "正在提取声称的事实...",
-    "正在识别人物与机构...",
-    "正在检测操纵信号...",
-    "正在评估信息完整性...",
-    "正在整理结构化数据...",
-  ];
-
-  const spinner = ora(hints[0]).start();
-  let current = 0;
-  const interval = setInterval(() => {
-    current = (current + 1) % hints.length;
-    spinner.text = hints[current];
-  }, 2500);
-
-  try {
-    const extraction = await extractStructured(provider, text);
-    clearInterval(interval);
-    spinner.stop();
-    return extraction;
-  } catch (err) {
-    clearInterval(interval);
-    spinner.stop();
-    throw err;
-  }
+  // REPL 模式下禁用 ora spinner，避免与 readline 冲突导致追问异常退出
+  console.log("  ◆ 正在提取结构化事实...");
+  return extractStructured(provider, text);
 }
 
 export async function startREPL() {
@@ -240,12 +217,16 @@ export async function startREPL() {
       session.pushUser(text);
       lastOriginalText = text;
 
-      // Step 1: Fact-check layer
-      const fcSpinner = ora("正在判断是否需要联网核查...").start();
-      const factCheck = await runFactCheck(text);
-      fcSpinner.stop();
-      if (factCheck.needed) {
-        printFactCheck(factCheck.query, factCheck.results);
+      // Step 1: Fact-check layer (REPL 禁用 ora，避免 readline 冲突)
+      let factCheck = { needed: false as boolean, query: "", results: [] as { title: string; url: string; snippet: string }[], summary: "" };
+      try {
+        console.log("  ◆ 正在判断是否需要联网核查...");
+        factCheck = await runFactCheck(text);
+        if (factCheck.needed) {
+          printFactCheck(factCheck.query, factCheck.results);
+        }
+      } catch {
+        // Graceful fallback: continue without fact-check
       }
 
       if (usePanel) {
@@ -267,12 +248,10 @@ export async function startREPL() {
             apiKey: firstResolved.apiKey,
             model: firstResolved.model,
           });
-          rl.pause();
           extraction = await safeExtract(firstProvider, text);
-          rl.resume();
-        } catch (extractErr: any) {
-          rl.resume();
-          printError(`结构化提取失败: ${extractErr.message}`);
+        } catch (extractErr: unknown) {
+          const msg = extractErr instanceof Error ? extractErr.message : String(extractErr);
+          printError(`结构化提取失败: ${msg}`);
           printInfo("正在 fallback 到本地规则引擎...");
           const { provider } = await getSingleProvider();
           const result = await analyzeContent(provider, config, text);
@@ -288,14 +267,13 @@ export async function startREPL() {
         // Step 3: Ask follow-up questions
         let supplementary = "";
         if (extraction.gaps.length > 0) {
-          const qsSpinner = ora("正在生成追问问题...").start();
+          console.log("  ◆ 正在生成追问问题...");
           let questions: import("./questioner.js").Question[] = [];
           try {
             questions = await buildQuestions(firstProvider!, extraction);
           } catch {
             questions = [];
           }
-          qsSpinner.stop();
 
           if (questions.length > 0) {
             printStage("需要补充一些信息", "?");
@@ -391,10 +369,19 @@ export async function startREPL() {
         console.log(chalk.hex("#c9a961")("  ★ 分析完成。您可以继续追问（最多5轮），或输入 /done 结束\n"));
       } else {
         // Single-provider / rule-based mode
-        const { provider } = await getSingleProvider();
-        const spinner = ora("正在分析内容...").start();
+        console.log("  ◆ 正在分析内容...");
+        let provider: Provider;
+        try {
+          const resolved = await getSingleProvider();
+          provider = resolved.provider;
+        } catch (resolveErr: unknown) {
+          const msg = resolveErr instanceof Error ? resolveErr.message : String(resolveErr);
+          printError(msg);
+          isAnalyzing = false;
+          rl.prompt();
+          return;
+        }
         const result = await analyzeContent(provider, config, text);
-        spinner.stop();
         printResult(result, config.language);
         const assistantSummary = `判定：${result.verdict}，${result.credibilityScore}分，核心：${result.redFlags.map((f: { zh: string }) => f.zh).join("；")}`;
         session.pushAssistant(assistantSummary);
