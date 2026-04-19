@@ -207,10 +207,10 @@ export async function startREPL() {
       const roundLabel = followUpRound - 1;
       printStage(`追问第 ${roundLabel}/5 轮`, "?");
 
-      const resolved = resolveProvider(config.provider !== "rule-based" ? config.provider : "qwen");
-      const provider = createProvider({ provider: resolved.meta.id, apiKey: resolved.apiKey, model: resolved.model });
-
       try {
+        const resolved = resolveProvider(config.provider !== "rule-based" ? config.provider : "qwen");
+        const provider = createProvider({ provider: resolved.meta.id, apiKey: resolved.apiKey, model: resolved.model });
+
         const answer = await runFollowUp(provider, lastOriginalText, lastExtraction, lastResult, text, roundLabel);
         console.log("");
         console.log(`  ${chalk.hex("#c9a961")("→")} ${answer.answerZh}`);
@@ -225,8 +225,9 @@ export async function startREPL() {
         } else {
           console.log(chalk.gray("  您可以继续追问，或输入 /done 结束\n"));
         }
-      } catch (err: any) {
-        printError(err.message || String(err));
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        printError(msg);
       }
 
       rl.prompt();

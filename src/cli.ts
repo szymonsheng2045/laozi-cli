@@ -64,11 +64,16 @@ program
     const usePanel = options.panel !== false && (options.panel === true || config.judgePanel.length > 0);
 
     // Step 1: Fact-check layer
-    const fcSpinner = ora("正在判断是否需要联网核查...").start();
-    const factCheck = await runFactCheck(text);
-    fcSpinner.stop();
-    if (factCheck.needed) {
-      printFactCheck(factCheck.query, factCheck.results);
+    let factCheck = { needed: false as boolean, query: "", results: [] as { title: string; url: string; snippet: string }[], summary: "" };
+    try {
+      const fcSpinner = ora("正在判断是否需要联网核查...").start();
+      factCheck = await runFactCheck(text);
+      fcSpinner.stop();
+      if (factCheck.needed) {
+        printFactCheck(factCheck.query, factCheck.results);
+      }
+    } catch {
+      // Graceful fallback: continue without fact-check
     }
 
     if (usePanel) {
@@ -83,21 +88,41 @@ program
 
       // Step 2: Extract structured facts using first provider
       printStage("正在提取结构化事实...", "◆");
-      const firstResolved = resolveProvider(panelIds[0]);
-      const firstProvider = createProvider({
-        provider: firstResolved.meta.id,
-        apiKey: firstResolved.apiKey,
-        model: firstResolved.model,
-      });
-
-      const extraction = await extractStructured(firstProvider, text);
-      console.log(`  ${chalk.green("✓")} 信息类型: ${extraction.message_type} · 声称: ${extraction.claims.length}条 · 缺口: ${extraction.gaps.length}个`);
+      let firstProvider: Provider;
+      let extraction: Extraction;
+      try {
+        const firstResolved = resolveProvider(panelIds[0]);
+        firstProvider = createProvider({
+          provider: firstResolved.meta.id,
+          apiKey: firstResolved.apiKey,
+          model: firstResolved.model,
+        });
+        extraction = await extractStructured(firstProvider, text);
+        console.log(`  ${chalk.green("✓")} 信息类型: ${extraction.message_type} · 声称: ${extraction.claims.length}条 · 缺口: ${extraction.gaps.length}个`);
+      } catch (extractErr: unknown) {
+        const msg = extractErr instanceof Error ? extractErr.message : String(extractErr);
+        printError(`结构化提取失败: ${msg}`);
+        printInfo("正在 fallback 到本地规则引擎...");
+        try {
+          const { provider } = await getProvider();
+          const result = await analyzeContent(provider, config, text);
+          printResult(result as AnalysisResult, options.lang || config.language);
+        } catch {
+          printError("本地规则引擎也无法启动。");
+        }
+        return;
+      }
 
       // Step 3: Ask follow-up questions (skip in non-TTY batch mode)
       let supplementary = "";
       if (extraction.gaps.length > 0 && process.stdin.isTTY) {
         const qSpinner = ora("正在生成追问问题...").start();
-        const questions = await buildQuestions(firstProvider, extraction);
+        let questions: Question[] = [];
+        try {
+          questions = await buildQuestions(firstProvider, extraction);
+        } catch {
+          questions = [];
+        }
         qSpinner.stop();
 
         if (questions.length > 0) {
@@ -181,7 +206,16 @@ program
     }
 
     // Single-provider / rule-based mode
-    const { provider } = await getProvider();
+    let provider: Provider;
+    try {
+      const resolved = await getProvider();
+      provider = resolved.provider;
+    } catch (resolveErr: unknown) {
+      const msg = resolveErr instanceof Error ? resolveErr.message : String(resolveErr);
+      printError(msg);
+      process.exit(1);
+    }
+
     const spinner = ora("正在分析内容...").start();
 
     try {
@@ -195,9 +229,10 @@ program
         inputPreview: text,
         result,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       spinner.stop();
-      printError(err.message || String(err));
+      const msg = err instanceof Error ? err.message : String(err);
+      printError(msg);
       process.exit(1);
     }
   });
@@ -257,20 +292,28 @@ program
 
       // Extract
       printStage("正在提取结构化事实...", "◆");
-      const firstResolved = resolveProvider(panelIds[0]);
-      const firstProvider = createProvider({
-        provider: firstResolved.meta.id,
-        apiKey: firstResolved.apiKey,
-        model: firstResolved.model,
-      });
-
+      let firstProvider: Provider;
       let extraction: Extraction;
       try {
+        const firstResolved = resolveProvider(panelIds[0]);
+        firstProvider = createProvider({
+          provider: firstResolved.meta.id,
+          apiKey: firstResolved.apiKey,
+          model: firstResolved.model,
+        });
         extraction = await extractStructured(firstProvider, transcript);
-      } catch (extractErr: any) {
-        printError(`结构化提取失败: ${extractErr.message}`);
+      } catch (extractErr: unknown) {
+        const msg = extractErr instanceof Error ? extractErr.message : String(extractErr);
+        printError(`结构化提取失败: ${msg}`);
         printInfo("正在 fallback 到本地规则引擎...");
-        const { provider } = await getProvider();
+        let provider: Provider;
+        try {
+          const resolved = await getProvider();
+          provider = resolved.provider;
+        } catch {
+          printError("本地规则引擎也无法启动。");
+          process.exit(1);
+        }
         const result = await analyzeContent(provider, config, transcript);
         printResult(result, options.lang || config.language);
         process.exit(0);
@@ -320,10 +363,15 @@ program
 
       if (providers.length === 0) {
         printError("所有模型配置均不可用，fallback 到本地规则引擎。");
-        const { provider } = await getProvider();
-        const result = await analyzeContent(provider, config, transcript);
-        printResult(result, options.lang || config.language);
-        process.exit(0);
+        try {
+          const resolved = await getProvider();
+          const result = await analyzeContent(resolved.provider, config, transcript);
+          printResult(result, options.lang || config.language);
+          process.exit(0);
+        } catch {
+          printError("本地规则引擎也无法启动。");
+          process.exit(1);
+        }
       }
 
       providers.forEach((p) => printModelProgress(p.name, "running"));
@@ -349,10 +397,15 @@ program
       const validResults = results.filter((r): r is NonNullable<typeof r> => r !== null);
       if (validResults.length === 0) {
         printError("所有模型分析均失败，fallback 到本地规则引擎。");
-        const { provider } = await getProvider();
-        const result = await analyzeContent(provider, config, transcript);
-        printResult(result, options.lang || config.language);
-        process.exit(0);
+        try {
+          const resolved = await getProvider();
+          const result = await analyzeContent(resolved.provider, config, transcript);
+          printResult(result, options.lang || config.language);
+          process.exit(0);
+        } catch {
+          printError("本地规则引擎也无法启动。");
+          process.exit(1);
+        }
       }
 
       const result = ensemble(validResults);
@@ -368,7 +421,15 @@ program
     }
 
     // Single-provider / rule-based mode
-    const { provider } = await getProvider();
+    let provider: Provider;
+    try {
+      const resolved = await getProvider();
+      provider = resolved.provider;
+    } catch (resolveErr: unknown) {
+      const msg = resolveErr instanceof Error ? resolveErr.message : String(resolveErr);
+      printError(msg);
+      process.exit(1);
+    }
     spinner = ora("正在分析内容...").start();
     try {
       const result = await analyzeContent(provider, config, transcript);
