@@ -29,6 +29,7 @@ export class HttpProvider implements Provider {
           messages,
           temperature: 0.3,
           max_tokens: 2048,
+          enable_search: true,
         }),
       });
 
