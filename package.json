@@ -22,6 +22,12 @@
   ],
   "author": "LAOZI.ART",
   "license": "MIT",
+  "files": [
+    "dist",
+    "prompts",
+    "install.sh",
+    "README.md"
+  ],
   "engines": {
     "node": ">=18"
   },
