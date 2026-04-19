@@ -266,8 +266,11 @@ export async function startREPL() {
             apiKey: firstResolved.apiKey,
             model: firstResolved.model,
           });
+          rl.pause();
           extraction = await safeExtract(firstProvider, text);
+          rl.resume();
         } catch (extractErr: any) {
+          rl.resume();
           printError(`结构化提取失败: ${extractErr.message}`);
           printInfo("正在 fallback 到本地规则引擎...");
           const { provider } = await getSingleProvider();
