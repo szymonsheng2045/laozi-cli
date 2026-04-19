@@ -27,7 +27,7 @@ export async function buildQuestions(
   const parsed = JSON.parse(jsonStr);
 
   if (!Array.isArray(parsed.questions)) return [];
-  return parsed.questions.slice(0, 2).map((q: any) => ({
+  return parsed.questions.slice(0, 2).map((q: { zh: string; en: string; target_gap: string }) => ({
     zh: q.zh || "",
     en: q.en || "",
     target_gap: q.target_gap || "",

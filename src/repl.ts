@@ -157,7 +157,7 @@ export async function startREPL() {
         const r = entry.result;
         const textToCopy = `【laozi.cli 分析报告】
 可信度：${r.credibilityScore}/100 — ${r.verdict}
-疑点：${r.redFlags.map((f: any) => f.zh).join("；")}
+疑点：${r.redFlags.map((f: { zh: string }) => f.zh).join("；")}
 给老人：${r.elderExplanation.zh}
 建议：${r.actionSuggestion.zh}
 总结：${r.summary.zh}`;
@@ -395,7 +395,7 @@ export async function startREPL() {
         const result = await analyzeContent(provider, config, text);
         spinner.stop();
         printResult(result, config.language);
-        const assistantSummary = `判定：${result.verdict}，${result.credibilityScore}分，核心：${result.redFlags.map((f: any) => f.zh).join("；")}`;
+        const assistantSummary = `判定：${result.verdict}，${result.credibilityScore}分，核心：${result.redFlags.map((f: { zh: string }) => f.zh).join("；")}`;
         session.pushAssistant(assistantSummary);
         saveHistoryEntry({
           id: Math.random().toString(36).slice(2),

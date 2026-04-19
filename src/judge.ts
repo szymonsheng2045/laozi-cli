@@ -12,23 +12,29 @@ export interface AnalysisResult {
   summary: { zh: string; en: string };
 }
 
-async function runSubJudge(
+async function runSubJudge<T>(
   provider: Provider,
   promptName: string,
   userContent: string,
-  fallback: any
-): Promise<any> {
-  try {
-    const raw = await provider.chat([
-      { role: "system", content: loadPrompt(promptName) },
-      { role: "user", content: userContent },
-    ]);
-    const jsonStr = extractJson(raw);
-    return JSON.parse(jsonStr);
-  } catch (e: any) {
-    // Graceful degradation: return fallback on timeout/parse failure
-    return fallback;
+  fallback: T,
+  maxRetries = 1
+): Promise<T> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const raw = await provider.chat([
+        { role: "system", content: loadPrompt(promptName) },
+        { role: "user", content: userContent },
+      ]);
+      const jsonStr = extractJson(raw);
+      return JSON.parse(jsonStr) as T;
+    } catch {
+      if (attempt >= maxRetries) {
+        return fallback;
+      }
+      await new Promise((r) => setTimeout(r, 500));
+    }
   }
+  return fallback;
 }
 
 function buildUserContent(
@@ -72,8 +78,8 @@ export async function runJudge(
   const score = typeof verdictRes?.credibilityScore === "number"
     ? Math.max(0, Math.min(100, Math.round(verdictRes.credibilityScore)))
     : 50;
-  const verdict = ["safe", "suspicious", "misinformation", "scam"].includes(verdictRes?.verdict)
-    ? verdictRes.verdict
+  const verdict: AnalysisResult["verdict"] = ["safe", "suspicious", "misinformation", "scam"].includes(verdictRes?.verdict)
+    ? (verdictRes.verdict as AnalysisResult["verdict"])
     : "suspicious";
   const summary = verdictRes?.summary || { zh: "无法生成总结。", en: "Unable to generate summary." };
 

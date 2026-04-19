@@ -28,6 +28,7 @@ function verdictEmoji(verdict: string): string {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function verdictColor(verdict: string): any {
   switch (verdict) {
     case "safe": return chalk.green;

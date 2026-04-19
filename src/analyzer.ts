@@ -62,19 +62,28 @@ function extractJson(raw: string): string {
   throw new Error("No JSON object found in response");
 }
 
-function normalizeResult(parsed: any): AnalysisResult {
+function normalizeResult(parsed: Record<string, unknown>): AnalysisResult {
   const score = typeof parsed.credibilityScore === "number" ? parsed.credibilityScore : 50;
-  const verdict = ["safe", "suspicious", "misinformation", "scam"].includes(parsed.verdict)
-    ? parsed.verdict
+  const verdictStr = typeof parsed.verdict === "string" ? parsed.verdict : "";
+  const verdict: AnalysisResult["verdict"] = ["safe", "suspicious", "misinformation", "scam"].includes(verdictStr)
+    ? (verdictStr as AnalysisResult["verdict"])
     : "suspicious";
+
+  const safeObj = (v: unknown): { zh: string; en: string } => {
+    if (v && typeof v === "object" && "zh" in v && "en" in v) {
+      const o = v as Record<string, unknown>;
+      return { zh: String(o.zh), en: String(o.en) };
+    }
+    return { zh: "", en: "" };
+  };
 
   return {
     credibilityScore: Math.max(0, Math.min(100, Math.round(score))),
     verdict,
     redFlags: Array.isArray(parsed.redFlags) ? parsed.redFlags : [],
-    elderExplanation: parsed.elderExplanation || { zh: "请谨慎对待该内容。", en: "Please treat this content with caution." },
-    actionSuggestion: parsed.actionSuggestion || { zh: "与家人讨论后再做决定。", en: "Discuss with family before acting." },
-    summary: parsed.summary || { zh: "无法生成总结。", en: "Unable to generate summary." },
+    elderExplanation: safeObj(parsed.elderExplanation) || { zh: "请谨慎对待该内容。", en: "Please treat this content with caution." },
+    actionSuggestion: safeObj(parsed.actionSuggestion) || { zh: "与家人讨论后再做决定。", en: "Discuss with family before acting." },
+    summary: safeObj(parsed.summary) || { zh: "无法生成总结。", en: "Unable to generate summary." },
   };
 }
 
