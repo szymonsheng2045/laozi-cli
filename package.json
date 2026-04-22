@@ -2,7 +2,7 @@
   "name": "laozi-cli",
   "version": "0.1.0",
   "description": "A lightweight CLI to help families identify misinformation targeting elderly internet users.",
-  "main": "dist/index.js",
+  "main": "dist/cli.js",
   "type": "module",
   "bin": {
     "laozi": "dist/cli.js"
@@ -25,6 +25,7 @@
   "files": [
     "dist",
     "prompts",
+    "data",
     "install.sh",
     "README.md"
   ],
@@ -44,6 +45,7 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^20.14.0",
     "jest": "^30.3.0",
+    "node-html-parser": "^7.1.0",
     "ts-jest": "^29.4.9",
     "typescript": "^5.4.5"
   }

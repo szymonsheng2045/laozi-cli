@@ -4,7 +4,8 @@ import { loadConfig } from "./config.js";
 import { createProvider, Provider } from "./providers/base.js";
 import { resolveProvider } from "./resolve-provider.js";
 import { printResult, printInfo, printError, printFactCheck, printStage, printModelProgress } from "./printer.js";
-import { ensemble, runJudge, AnalysisResult } from "./judge.js";
+import { ensemble, runJudge } from "./judge.js";
+import type { AnalysisResult, FactCheckContext } from "./types.js";
 import { saveHistoryEntry } from "./history.js";
 import { runFactCheck } from "./fact-check.js";
 import { SessionMemory } from "./session.js";
@@ -235,7 +236,7 @@ export async function startREPL() {
 
       // Step 1: Fact-check layer (REPL 禁用 ora，避免 readline 冲突)
       let spinner = createSpinner("分析中...");
-      let factCheck = { needed: false as boolean, query: "", results: [] as { title: string; url: string; snippet: string }[], summary: "" };
+      let factCheck: FactCheckContext = { needed: false, query: "", results: [], summary: "", authorityCount: 0, authoritySources: [] };
       try {
         factCheck = await runFactCheck(text);
         if (factCheck.needed) {
@@ -342,6 +343,7 @@ export async function startREPL() {
         }
 
         const searchCtx = factCheck.needed ? factCheck.summary : undefined;
+        const localCtx = factCheck.localContext || undefined;
         const sessionCtx = session.formatContext();
 
         const modelStatuses = new Map<string, "running" | "done" | "error">();
@@ -351,7 +353,7 @@ export async function startREPL() {
         const results = await Promise.all(
           providers.map(async (p) => {
             try {
-              const r = await runJudge(p, text, extraction, supplementary || undefined, sessionCtx);
+              const r = await runJudge(p, text, extraction, supplementary || undefined, sessionCtx, searchCtx, localCtx);
               modelStatuses.set(p.name, "done");
               return r;
             } catch (e: any) {

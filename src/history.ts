@@ -1,7 +1,7 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync, chmodSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, chmodSync, renameSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { AnalysisResult } from "./analyzer.js";
+import type { AnalysisResult } from "./types.js";
 
 export interface HistoryEntry {
   id: string;
@@ -45,12 +45,16 @@ export function saveHistoryEntry(entry: HistoryEntry): void {
   history.unshift(entry);
   // 只保留最近 50 条
   const trimmed = history.slice(0, 50);
-  writeFileSync(historyPath, JSON.stringify(trimmed, null, 2), "utf-8");
+
+  // 原子写：先写临时文件再重命名，避免并发修改导致文件损坏
+  const tmpPath = historyPath + ".tmp";
+  writeFileSync(tmpPath, JSON.stringify(trimmed, null, 2), "utf-8");
   try {
-    chmodSync(historyPath, 0o600);
+    chmodSync(tmpPath, 0o600);
   } catch {
     // Ignore permission errors on Windows
   }
+  renameSync(tmpPath, historyPath);
 }
 
 export function clearHistory(): void {

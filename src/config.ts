@@ -25,6 +25,7 @@ export interface Config {
   whisperModel: string;
   language: "zh" | "en" | "bilingual";
   judgePanel: string[];
+  tavilyApiKey: string;
 }
 
 const configDir = join(homedir(), ".laozi");
@@ -32,14 +33,15 @@ const configPath = join(configDir, "config.json");
 
 export const defaultConfig: Config = {
   version: 1,
-  provider: "qwen",
+  provider: "rule-based",
   apiKey: "",
   keys: {},
   baseURL: "",
   model: "local-rules",
   whisperModel: "whisper-1",
   language: "bilingual",
-  judgePanel: ["qwen", "kimi", "zhipu", "minimax"],
+  judgePanel: [],
+  tavilyApiKey: "",
 };
 
 export function loadConfig(): Config {
@@ -60,6 +62,10 @@ export function loadConfig(): Config {
     // Migrate old configs without judgePanel default
     if (!Array.isArray(parsed.judgePanel)) {
       parsed.judgePanel = defaultConfig.judgePanel;
+    }
+    // Migrate old configs without tavilyApiKey
+    if (typeof parsed.tavilyApiKey !== "string") {
+      parsed.tavilyApiKey = defaultConfig.tavilyApiKey;
     }
     return { ...defaultConfig, ...parsed };
   } catch {

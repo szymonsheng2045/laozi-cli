@@ -1,0 +1,902 @@
+[
+  {
+    "text": "我爸说最近看短视频说味精是化学合成的，吃了会致癌，家里不能再吃了",
+    "category": "boundary",
+    "expected": "mixed",
+    "score": 25,
+    "verdict": "虚假信息",
+    "summary": "夸大单一食物的致癌或防癌效果，属于伪科学饮食谣言。",
+    "elapsed": "2.0"
+  },
+  {
+    "text": "反复烧开的水含有亚硝酸盐，喝了会致癌",
+    "category": "exaggerated",
+    "expected": "suspicious",
+    "score": 45,
+    "verdict": "可疑",
+    "summary": "千滚水致癌是已被辟谣的谣言，反复烧开的水安全可饮。",
+    "elapsed": "0.1"
+  },
+  {
+    "text": "剩饭剩菜需要彻底加热后再食用",
+    "category": "factual",
+    "expected": "safe",
+    "score": 95,
+    "verdict": "安全",
+    "summary": "剩菜彻底加热后食用是食品安全常识，内容真实。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "每天必须走够一万步，否则不健康",
+    "category": "exaggerated",
+    "expected": "suspicious",
+    "score": 60,
+    "verdict": "可疑",
+    "summary": "内容未触发本地规则库中的已知模式，建议谨慎对待。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "非典时期抢盐防辐射",
+    "category": "misinformation",
+    "expected": "misinformation",
+    "score": 20,
+    "verdict": "虚假信息",
+    "summary": "抢盐防辐射是多次出现的谣言，食用碘盐对核辐射无效。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "喝漂白水可以治疗新冠肺炎",
+    "category": "misinformation",
+    "expected": "misinformation",
+    "score": 5,
+    "verdict": "虚假信息",
+    "summary": "饮用漂白水是极其危险的行为，可能导致致命后果。",
+    "elapsed": "1.2"
+  },
+  {
+    "text": "用生姜包在脚底可以治疗感冒",
+    "category": "exaggerated",
+    "expected": "suspicious",
+    "score": 25,
+    "verdict": "虚假信息",
+    "summary": "生姜包脚治感冒是民间偏方，没有医学依据。",
+    "elapsed": "0.1"
+  },
+  {
+    "text": "人体内有6公斤宿便，不排出来会中毒",
+    "category": "misinformation",
+    "expected": "misinformation",
+    "score": 10,
+    "verdict": "虚假信息",
+    "summary": "宿便排毒是伪科学概念，常用于推销泻药和减肥产品。",
+    "elapsed": "0.1"
+  },
+  {
+    "text": "老人接到电话说中了一等奖，要先交手续费才能领奖",
+    "category": "boundary",
+    "expected": "mixed",
+    "score": 5,
+    "verdict": "诈骗",
+    "summary": "经典的先付费诈骗套路，常见于中奖、退款、解冻资金等场景。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "艾滋病是美国军方制造的种族灭绝武器",
+    "category": "misinformation",
+    "expected": "misinformation",
+    "score": 10,
+    "verdict": "虚假信息",
+    "summary": "艾滋病是人造武器的说法是已被辟谣的阴谋论。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "白头发拔一根会长三根，千万别拔",
+    "category": "exaggerated",
+    "expected": "suspicious",
+    "score": 50,
+    "verdict": "可疑",
+    "summary": "拔白头发长三根是民间说法，没有科学依据。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "定期开窗通风可以保持室内空气清新",
+    "category": "factual",
+    "expected": "safe",
+    "score": 95,
+    "verdict": "安全",
+    "summary": "定期开窗通风有益健康是科学常识，内容真实。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "疫苗接种是预防传染病的有效手段",
+    "category": "factual",
+    "expected": "safe",
+    "score": 95,
+    "verdict": "安全",
+    "summary": "疫苗接种是科学有效的疾病预防手段，内容真实可信。",
+    "elapsed": "1.3"
+  },
+  {
+    "text": "土鸡蛋比超市的洋鸡蛋营养价值高很多",
+    "category": "exaggerated",
+    "expected": "suspicious",
+    "score": 50,
+    "verdict": "可疑",
+    "summary": "土鸡蛋营养价值被夸大，与洋鸡蛋差异不大。",
+    "elapsed": "0.1"
+  },
+  {
+    "text": "糖尿病患者需要定期监测血糖水平",
+    "category": "factual",
+    "expected": "safe",
+    "score": 95,
+    "verdict": "安全",
+    "summary": "糖尿病患者监测血糖是科学的健康管理方式，内容真实。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "邻居说最近又出了新的流感病毒变异，特别厉害，赶紧囤药",
+    "category": "boundary",
+    "expected": "mixed",
+    "score": 60,
+    "verdict": "可疑",
+    "summary": "内容未触发本地规则库中的已知模式，建议谨慎对待。",
+    "elapsed": "1.8"
+  },
+  {
+    "text": "淋巴排毒按摩可以排出体内毒素",
+    "category": "misinformation",
+    "expected": "misinformation",
+    "score": 15,
+    "verdict": "虚假信息",
+    "summary": "淋巴排毒按摩是伪科学，可能造成身体损伤。",
+    "elapsed": "0.1"
+  },
+  {
+    "text": "味精吃多了会掉头发，还会变笨",
+    "category": "exaggerated",
+    "expected": "suspicious",
+    "score": 25,
+    "verdict": "虚假信息",
+    "summary": "味精有害论是已被辟谣的谣言，适量使用完全安全。",
+    "elapsed": "0.1"
+  },
+  {
+    "text": "长期睡眠不足会影响免疫力",
+    "category": "factual",
+    "expected": "safe",
+    "score": 95,
+    "verdict": "安全",
+    "summary": "充足睡眠有益健康，内容真实可信。",
+    "elapsed": "0.1"
+  },
+  {
+    "text": "喝足够的水有助于身体新陈代谢",
+    "category": "factual",
+    "expected": "safe",
+    "score": 95,
+    "verdict": "安全",
+    "summary": "充足饮水有益健康是科学常识，内容真实。",
+    "elapsed": "0.1"
+  },
+  {
+    "text": "喝醋可以软化血管，预防动脉硬化",
+    "category": "misinformation",
+    "expected": "misinformation",
+    "score": 15,
+    "verdict": "虚假信息",
+    "summary": "典型的健康养生谣言，利用老年人对心血管疾病的恐惧进行传播，没有科学依据。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "早起空腹喝一杯水可以排毒养颜",
+    "category": "exaggerated",
+    "expected": "suspicious",
+    "score": 60,
+    "verdict": "可疑",
+    "summary": "内容未触发本地规则库中的已知模式，建议谨慎对待。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "药品有保质期，过期药品不能服用",
+    "category": "factual",
+    "expected": "safe",
+    "score": 95,
+    "verdict": "安全",
+    "summary": "过期药品不可服用是基本的用药安全常识，内容真实。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "喝茶可以解酒，喝醉了就喝茶",
+    "category": "exaggerated",
+    "expected": "suspicious",
+    "score": 45,
+    "verdict": "可疑",
+    "summary": "喝茶解酒是错误的认知，茶不能加速酒精代谢。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "磁铁戴在身上可以吸走身体里的毒素治病",
+    "category": "misinformation",
+    "expected": "misinformation",
+    "score": 10,
+    "verdict": "虚假信息",
+    "summary": "磁疗排毒是完全没有科学依据的伪科学，常见于保健品推销。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "地球是平的，宇航员的照片都是假的",
+    "category": "misinformation",
+    "expected": "misinformation",
+    "score": 5,
+    "verdict": "虚假信息",
+    "summary": "地平说和登月骗局论是完全没有科学依据的阴谋论。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "疫苗里面有毒，打疫苗会让孩子得自闭症",
+    "category": "misinformation",
+    "expected": "misinformation",
+    "score": 5,
+    "verdict": "虚假信息",
+    "summary": "疫苗导致自闭症是完全错误的谣言，可能造成严重的公共卫生危害。",
+    "elapsed": "1.8"
+  },
+  {
+    "text": "安全带可以在交通事故中保护生命安全",
+    "category": "factual",
+    "expected": "safe",
+    "score": 95,
+    "verdict": "安全",
+    "summary": "安全带和头盔是有效的交通安全保护措施，内容真实。",
+    "elapsed": "1.2"
+  },
+  {
+    "text": "911恐怖袭击是美国政府自导自演的",
+    "category": "misinformation",
+    "expected": "misinformation",
+    "score": 10,
+    "verdict": "虚假信息",
+    "summary": "911阴谋论是完全错误的，已被多项独立调查证伪。",
+    "elapsed": "0.1"
+  },
+  {
+    "text": "戴眼镜会让近视度数越来越深",
+    "category": "exaggerated",
+    "expected": "suspicious",
+    "score": 45,
+    "verdict": "可疑",
+    "summary": "戴眼镜加深近视是错误的说法，属于常见的视力误区。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "芹菜是降压神菜，吃了不用吃降压药",
+    "category": "exaggerated",
+    "expected": "suspicious",
+    "score": 35,
+    "verdict": "虚假信息",
+    "summary": "芹菜降压不能替代药物，擅自停药可能危及生命。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "阿胶是补血圣品，女人一定要吃",
+    "category": "exaggerated",
+    "expected": "suspicious",
+    "score": 40,
+    "verdict": "可疑",
+    "summary": "阿胶补血效果被夸大，属于高价低效的滋补品宣传。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "看手机时间过长容易导致眼睛疲劳",
+    "category": "factual",
+    "expected": "safe",
+    "score": 95,
+    "verdict": "安全",
+    "summary": "控制屏幕时间保护视力是科学建议，内容真实。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "每天保证七到八小时的睡眠对健康有益",
+    "category": "factual",
+    "expected": "safe",
+    "score": 95,
+    "verdict": "安全",
+    "summary": "充足睡眠有益健康，内容真实可信。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "新冠病毒是中国实验室故意制造的生物武器",
+    "category": "misinformation",
+    "expected": "misinformation",
+    "score": 10,
+    "verdict": "虚假信息",
+    "summary": "新冠病毒实验室泄漏说已被WHO和多项科学研究否定。",
+    "elapsed": "1.2"
+  },
+  {
+    "text": "吃生泥鳅可以清除体内的寄生虫和毒素",
+    "category": "misinformation",
+    "expected": "misinformation",
+    "score": 5,
+    "verdict": "虚假信息",
+    "summary": "食用生泥鳅不仅不能排毒，还会导致寄生虫感染，极其危险。",
+    "elapsed": "0.1"
+  },
+  {
+    "text": "骨质疏松的老年人需要适当补钙",
+    "category": "factual",
+    "expected": "safe",
+    "score": 95,
+    "verdict": "安全",
+    "summary": "骨质疏松补钙是科学建议，内容真实可信。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "坚持适度运动可以降低血压",
+    "category": "factual",
+    "expected": "safe",
+    "score": 95,
+    "verdict": "安全",
+    "summary": "适度运动有助于控制血压，内容真实。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "过马路要走斑马线，遵守交通规则",
+    "category": "factual",
+    "expected": "safe",
+    "score": 95,
+    "verdict": "安全",
+    "summary": "遵守交通规则是正确的安全常识，内容真实。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "红糖水比止痛药更有效地治疗痛经",
+    "category": "misinformation",
+    "expected": "misinformation",
+    "score": 25,
+    "verdict": "虚假信息",
+    "summary": "红糖水止痛效果有限，不能替代正规药物治疗。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "我姑说多喝茶可以降血压，降压药可以慢慢停掉",
+    "category": "boundary",
+    "expected": "mixed",
+    "score": 60,
+    "verdict": "可疑",
+    "summary": "内容未触发本地规则库中的已知模式，建议谨慎对待。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "燃气泄漏时要立即开窗通风，不能开关电器",
+    "category": "factual",
+    "expected": "safe",
+    "score": 95,
+    "verdict": "安全",
+    "summary": "燃气泄漏应急处理方法是正确的安全常识，内容真实。",
+    "elapsed": "0.1"
+  },
+  {
+    "text": "心肺复苏术可以在紧急情况下挽救生命",
+    "category": "factual",
+    "expected": "safe",
+    "score": 95,
+    "verdict": "安全",
+    "summary": "心肺复苏术是科学有效的急救技术，内容真实。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "自来水里有氯，烧开后也不能喝",
+    "category": "exaggerated",
+    "expected": "suspicious",
+    "score": 60,
+    "verdict": "可疑",
+    "summary": "内容未触发本地规则库中的已知模式，建议谨慎对待。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "方便面是垃圾食品，吃一次要排毒一个月",
+    "category": "exaggerated",
+    "expected": "suspicious",
+    "score": 45,
+    "verdict": "可疑",
+    "summary": "方便面排毒论是夸大其词，方便面是安全的加工食品。",
+    "elapsed": "0.1"
+  },
+  {
+    "text": "微波炉加热食物会破坏营养产生辐射",
+    "category": "misinformation",
+    "expected": "misinformation",
+    "score": 20,
+    "verdict": "虚假信息",
+    "summary": "关于微波炉的谣言已被多次辟谣，属于典型的伪科学恐慌。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "我姨说有一种进口精油抹在关节上可以治好关节炎",
+    "category": "boundary",
+    "expected": "mixed",
+    "score": 60,
+    "verdict": "可疑",
+    "summary": "内容未触发本地规则库中的已知模式，建议谨慎对待。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "每天喝红酒可以软化血管，预防心脏病",
+    "category": "exaggerated",
+    "expected": "suspicious",
+    "score": 15,
+    "verdict": "虚假信息",
+    "summary": "典型的健康养生谣言，利用老年人对心血管疾病的恐惧进行传播，没有科学依据。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "情绪激动时血压会升高，老人要注意平复心情",
+    "category": "factual",
+    "expected": "safe",
+    "score": 95,
+    "verdict": "安全",
+    "summary": "情绪影响血压是医学常识，内容真实。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "网上说鸡肉不洗干净都是毒素，要用热水多焯几遍",
+    "category": "exaggerated",
+    "expected": "suspicious",
+    "score": 60,
+    "verdict": "可疑",
+    "summary": "内容未触发本地规则库中的已知模式，建议谨慎对待。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "天线宝宝动画片是在给儿童洗脑",
+    "category": "misinformation",
+    "expected": "misinformation",
+    "score": 10,
+    "verdict": "虚假信息",
+    "summary": "天线宝宝洗脑论是毫无根据的阴谋论，属于网络谣言。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "小区群里有人说要赶紧交社保补缴费，不然养老金要断了，还附了一个链接",
+    "category": "boundary",
+    "expected": "mixed",
+    "score": 60,
+    "verdict": "可疑",
+    "summary": "内容未触发本地规则库中的已知模式，建议谨慎对待。",
+    "elapsed": "1.2"
+  },
+  {
+    "text": "板蓝根可以预防非典和新冠",
+    "category": "misinformation",
+    "expected": "misinformation",
+    "score": 15,
+    "verdict": "虚假信息",
+    "summary": "声称某药物可预防新冠是已被辟谣的虚假信息。",
+    "elapsed": "1.3"
+  },
+  {
+    "text": "多吃蔬菜水果有助于补充维生素和膳食纤维",
+    "category": "factual",
+    "expected": "safe",
+    "score": 95,
+    "verdict": "安全",
+    "summary": "多吃蔬菜水果有益健康是科学饮食建议，内容真实。",
+    "elapsed": "0.1"
+  },
+  {
+    "text": "牛奶和鸡蛋不能一起吃，会中毒",
+    "category": "exaggerated",
+    "expected": "suspicious",
+    "score": 60,
+    "verdict": "可疑",
+    "summary": "内容未触发本地规则库中的已知模式，建议谨慎对待。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "流感季节外出佩戴口罩可以减少感染风险",
+    "category": "factual",
+    "expected": "safe",
+    "score": 95,
+    "verdict": "安全",
+    "summary": "佩戴口罩预防呼吸道传染病是科学有效的措施，内容真实。",
+    "elapsed": "1.3"
+  },
+  {
+    "text": "空腹不能吃香蕉，对心脏不好",
+    "category": "exaggerated",
+    "expected": "suspicious",
+    "score": 60,
+    "verdict": "可疑",
+    "summary": "内容未触发本地规则库中的已知模式，建议谨慎对待。",
+    "elapsed": "0.1"
+  },
+  {
+    "text": "食物相克表上说很多食物不能一起吃",
+    "category": "misinformation",
+    "expected": "misinformation",
+    "score": 20,
+    "verdict": "虚假信息",
+    "summary": "食物相克是流传多年的伪科学，已被营养学界否定。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "夏天高温天气要多喝水预防中暑",
+    "category": "factual",
+    "expected": "safe",
+    "score": 95,
+    "verdict": "安全",
+    "summary": "高温天多喝水防中暑是正确的健康建议，内容真实。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "微波炉加热的食物会产生致癌物",
+    "category": "exaggerated",
+    "expected": "suspicious",
+    "score": 20,
+    "verdict": "虚假信息",
+    "summary": "关于微波炉的谣言已被多次辟谣，属于典型的伪科学恐慌。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "老年人应该每年做一次全面体检",
+    "category": "factual",
+    "expected": "safe",
+    "score": 95,
+    "verdict": "安全",
+    "summary": "定期体检是科学的健康管理方式，内容真实可信。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "吸烟可以预防感染新冠病毒",
+    "category": "misinformation",
+    "expected": "misinformation",
+    "score": 15,
+    "verdict": "虚假信息",
+    "summary": "声称某药物可预防新冠是已被辟谣的虚假信息。",
+    "elapsed": "1.2"
+  },
+  {
+    "text": "适当晒太阳可以帮助身体合成维生素D",
+    "category": "factual",
+    "expected": "safe",
+    "score": 95,
+    "verdict": "安全",
+    "summary": "适度晒太阳有助于维生素D合成，内容真实。",
+    "elapsed": "0.1"
+  },
+  {
+    "text": "拍打拉筋可以治愈癌症和糖尿病",
+    "category": "misinformation",
+    "expected": "misinformation",
+    "score": 10,
+    "verdict": "虚假信息",
+    "summary": "拍打拉筋治愈疾病是伪科学，可能造成身体伤害。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "喝绿豆汤可以包治百病",
+    "category": "misinformation",
+    "expected": "misinformation",
+    "score": 20,
+    "verdict": "虚假信息",
+    "summary": "绿豆汤解百毒是完全没有科学依据的谣言。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "味精是化学合成的，吃了对身体有害",
+    "category": "exaggerated",
+    "expected": "suspicious",
+    "score": 25,
+    "verdict": "虚假信息",
+    "summary": "味精有害论是已被辟谣的谣言，适量使用完全安全。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "螃蟹和柿子一起吃会中毒死亡",
+    "category": "exaggerated",
+    "expected": "suspicious",
+    "score": 45,
+    "verdict": "可疑",
+    "summary": "食物相克论是已被否定的伪科学，螃蟹柿子同食无害。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "每天坚持适度锻炼比久坐不动更健康",
+    "category": "factual",
+    "expected": "safe",
+    "score": 95,
+    "verdict": "安全",
+    "summary": "适度运动优于久坐是科学共识，内容真实。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "安全带和头盔可以有效减少交通伤害",
+    "category": "factual",
+    "expected": "safe",
+    "score": 95,
+    "verdict": "安全",
+    "summary": "安全带和头盔是有效的交通安全保护措施，内容真实。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "猪油比植物油更健康，因为猪油是天然的",
+    "category": "exaggerated",
+    "expected": "suspicious",
+    "score": 45,
+    "verdict": "可疑",
+    "summary": "猪油比植物油更健康的说法是错误的，猪油应适量食用。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "张悟本说每天生吃茄子可以治百病",
+    "category": "misinformation",
+    "expected": "misinformation",
+    "score": 10,
+    "verdict": "虚假信息",
+    "summary": "生吃茄子治百病是张悟本等伪养生专家的骗局，已被揭穿。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "饭后散步有助于消化吸收",
+    "category": "factual",
+    "expected": "safe",
+    "score": 95,
+    "verdict": "安全",
+    "summary": "饭后散步有助于消化是科学建议，内容真实。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "酸性体质容易得癌症，要多吃碱性食物",
+    "category": "misinformation",
+    "expected": "misinformation",
+    "score": 10,
+    "verdict": "虚假信息",
+    "summary": "已被辟谣多年的伪科学理论，常被用于推销保健品和特殊食品。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "发生火灾时要用湿毛巾捂住口鼻弯腰逃生",
+    "category": "factual",
+    "expected": "safe",
+    "score": 95,
+    "verdict": "安全",
+    "summary": "火灾逃生自救方法是正确的安全常识，内容真实。",
+    "elapsed": "1.2"
+  },
+  {
+    "text": "红枣补血效果特别好，贫血要多吃红枣",
+    "category": "exaggerated",
+    "expected": "suspicious",
+    "score": 45,
+    "verdict": "可疑",
+    "summary": "红枣补血效果被夸大，属于常见的饮食夸大宣传。",
+    "elapsed": "0.1"
+  },
+  {
+    "text": "吸烟有害健康，会增加肺癌风险",
+    "category": "factual",
+    "expected": "safe",
+    "score": 95,
+    "verdict": "安全",
+    "summary": "吸烟有害健康是科学共识，内容真实可信。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "骨头汤补钙效果最好，多喝骨头汤",
+    "category": "exaggerated",
+    "expected": "suspicious",
+    "score": 45,
+    "verdict": "可疑",
+    "summary": "骨头汤补钙效果被夸大，属于常见的饮食误区。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "隔夜菜会产生亚硝酸盐，吃了会致癌",
+    "category": "exaggerated",
+    "expected": "suspicious",
+    "score": 25,
+    "verdict": "虚假信息",
+    "summary": "夸大单一食物的致癌或防癌效果，属于伪科学饮食谣言。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "吃大量海带可以防核辐射",
+    "category": "misinformation",
+    "expected": "misinformation",
+    "score": 20,
+    "verdict": "虚假信息",
+    "summary": "海带防核辐射是完全错误的说法，没有科学依据。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "定期刷牙可以预防龋齿和牙周病",
+    "category": "factual",
+    "expected": "safe",
+    "score": 95,
+    "verdict": "安全",
+    "summary": "刷牙预防口腔疾病是科学常识，内容真实。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "大蒜生吃可以杀死体内的所有细菌",
+    "category": "exaggerated",
+    "expected": "suspicious",
+    "score": 40,
+    "verdict": "可疑",
+    "summary": "夸大大蒜的抗菌效果，属于常见的夸大宣传。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "北京是中华人民共和国的首都",
+    "category": "factual",
+    "expected": "safe",
+    "score": 95,
+    "verdict": "安全",
+    "summary": "北京是中华人民共和国首都是基本事实，内容真实。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "美国登月是骗局，是在摄影棚里拍的",
+    "category": "misinformation",
+    "expected": "misinformation",
+    "score": 5,
+    "verdict": "虚假信息",
+    "summary": "地平说和登月骗局论是完全没有科学依据的阴谋论。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "双黄连口服液可以预防新冠病毒",
+    "category": "misinformation",
+    "expected": "misinformation",
+    "score": 15,
+    "verdict": "虚假信息",
+    "summary": "声称某药物可预防新冠是已被辟谣的虚假信息。",
+    "elapsed": "1.4"
+  },
+  {
+    "text": "放血疗法可以治愈高血压",
+    "category": "misinformation",
+    "expected": "misinformation",
+    "score": 5,
+    "verdict": "虚假信息",
+    "summary": "放血疗法属于已被现代医学淘汰的危险伪科学，可能危及生命。",
+    "elapsed": "0.1"
+  },
+  {
+    "text": "每天喝醋可以清理血管里的垃圾",
+    "category": "exaggerated",
+    "expected": "suspicious",
+    "score": 15,
+    "verdict": "虚假信息",
+    "summary": "典型的健康养生谣言，利用老年人对心血管疾病的恐惧进行传播，没有科学依据。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "微信群里发了一个链接说免费领取鸡蛋，填个人信息就行",
+    "category": "boundary",
+    "expected": "mixed",
+    "score": 60,
+    "verdict": "可疑",
+    "summary": "内容未触发本地规则库中的已知模式，建议谨慎对待。",
+    "elapsed": "1.4"
+  },
+  {
+    "text": "我爸听战友说有一种药可以完全治好糖尿病，不用再打针",
+    "category": "boundary",
+    "expected": "mixed",
+    "score": 60,
+    "verdict": "可疑",
+    "summary": "内容未触发本地规则库中的已知模式，建议谨慎对待。",
+    "elapsed": "0.1"
+  },
+  {
+    "text": "月球背面有外星人的基地",
+    "category": "misinformation",
+    "expected": "misinformation",
+    "score": 10,
+    "verdict": "虚假信息",
+    "summary": "月球背面有外星人基地是科幻编造，没有任何科学依据。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "高血压患者应该控制食盐摄入量",
+    "category": "factual",
+    "expected": "safe",
+    "score": 95,
+    "verdict": "安全",
+    "summary": "控制盐摄入有助于高血压管理，内容真实。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "摇晃婴儿可以治疗脑瘫和发育迟缓",
+    "category": "misinformation",
+    "expected": "misinformation",
+    "score": 5,
+    "verdict": "虚假信息",
+    "summary": "摇晃婴儿治疗疾病是极其危险的错误信息，可能造成严重后果。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "勤洗手可以预防流感等传染性疾病",
+    "category": "factual",
+    "expected": "safe",
+    "score": 95,
+    "verdict": "安全",
+    "summary": "勤洗手预防传染病是科学共识，内容真实可信。",
+    "elapsed": "1.3"
+  },
+  {
+    "text": "电视广告上说有一种进口保健品吃了可以治好老年痴呆",
+    "category": "boundary",
+    "expected": "mixed",
+    "score": 60,
+    "verdict": "可疑",
+    "summary": "内容未触发本地规则库中的已知模式，建议谨慎对待。",
+    "elapsed": "0.1"
+  },
+  {
+    "text": "5G基站辐射会导致癌症和新冠",
+    "category": "misinformation",
+    "expected": "misinformation",
+    "score": 10,
+    "verdict": "虚假信息",
+    "summary": "5G辐射致癌是完全错误的谣言，没有任何科学依据。",
+    "elapsed": "1.3"
+  },
+  {
+    "text": "豆浆不能空腹喝，否则会拉肚子",
+    "category": "exaggerated",
+    "expected": "suspicious",
+    "score": 50,
+    "verdict": "可疑",
+    "summary": "空腹不能喝豆浆是错误的说法，豆浆是安全的营养饮品。",
+    "elapsed": "0.1"
+  },
+  {
+    "text": "我妈说专家讲牛奶不能和鸡蛋一起吃，会生病",
+    "category": "boundary",
+    "expected": "mixed",
+    "score": 60,
+    "verdict": "可疑",
+    "summary": "内容未触发本地规则库中的已知模式，建议谨慎对待。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "转基因食品会导致癌症和不孕不育",
+    "category": "misinformation",
+    "expected": "misinformation",
+    "score": 20,
+    "verdict": "虚假信息",
+    "summary": "转基因食品致癌是不实信息，经过科学评估的转基因食品是安全的。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "绿豆汤可以解百毒，夏天一定要多喝",
+    "category": "exaggerated",
+    "expected": "suspicious",
+    "score": 20,
+    "verdict": "虚假信息",
+    "summary": "绿豆汤解百毒是完全没有科学依据的谣言。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "韭菜是壮阳草，男人要多吃",
+    "category": "exaggerated",
+    "expected": "suspicious",
+    "score": 45,
+    "verdict": "可疑",
+    "summary": "韭菜壮阳功效被夸大，属于没有科学依据的说法。",
+    "elapsed": "0.0"
+  },
+  {
+    "text": "手机辐射太大，放床头会得脑癌",
+    "category": "exaggerated",
+    "expected": "suspicious",
+    "score": 60,
+    "verdict": "可疑",
+    "summary": "内容未触发本地规则库中的已知模式，建议谨慎对待。",
+    "elapsed": "0.0"
+  }
+]

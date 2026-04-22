@@ -1,0 +1,509 @@
+
+[1/100] EXAGGERATED
+Text: 螃蟹和柿子一起吃会中毒死亡
+  Result: 45/100 可疑 (0.1s)
+
+[2/100] EXAGGERATED
+Text: 绿豆汤可以解百毒，夏天一定要多喝
+  Result: 20/100 虚假信息 (0.0s)
+
+[3/100] MISINFORMATION
+Text: 酸性体质容易得癌症，要多吃碱性食物
+  Result: 10/100 虚假信息 (0.0s)
+
+[4/100] FACTUAL
+Text: 燃气泄漏时要立即开窗通风，不能开关电器
+  Result: 95/100 安全 (0.0s)
+
+[5/100] BOUNDARY
+Text: 老人接到电话说中了一等奖，要先交手续费才能领奖
+  Result: 5/100 诈骗 (0.0s)
+
+[6/100] EXAGGERATED
+Text: 阿胶是补血圣品，女人一定要吃
+  Result: 40/100 可疑 (0.0s)
+
+[7/100] MISINFORMATION
+Text: 磁铁戴在身上可以吸走身体里的毒素治病
+  Result: 10/100 虚假信息 (0.0s)
+
+[8/100] FACTUAL
+Text: 安全带和头盔可以有效减少交通伤害
+  Result: 95/100 安全 (0.0s)
+
+[9/100] BOUNDARY
+Text: 我姨说有一种进口精油抹在关节上可以治好关节炎
+  Result: 60/100 可疑 (0.0s)
+
+[10/100] MISINFORMATION
+Text: 张悟本说每天生吃茄子可以治百病
+  Result: 10/100 虚假信息 (0.0s)
+
+[11/100] BOUNDARY
+Text: 我爸听战友说有一种药可以完全治好糖尿病，不用再打针
+  Result: 60/100 可疑 (0.0s)
+
+[12/100] BOUNDARY
+Text: 邻居说最近又出了新的流感病毒变异，特别厉害，赶紧囤药
+  Result: 60/100 `N/{\_`Nяs^;`fN͑c:y|^y EQRS%cT2Tc:g6R\O(u R:\_~y{^ Sexvz㉳Q2c (1.9s)
+
+[13/100] EXAGGERATED
+Text: 韭菜是壮阳草，男人要多吃
+  Result: 45/100 可疑 (0.1s)
+
+[14/100] MISINFORMATION
+Text: 喝漂白水可以治疗新冠肺炎
+  Result: 5/100 虚假信息 (1.3s)
+
+[15/100] MISINFORMATION
+Text: 天线宝宝动画片是在给儿童洗脑
+  Result: 10/100 虚假信息 (0.1s)
+
+[16/100] MISINFORMATION
+Text: 人体内有6公斤宿便，不排出来会中毒
+  Result: 10/100 虚假信息 (0.0s)
+
+[17/100] MISINFORMATION
+Text: 放血疗法可以治愈高血压
+  Result: 5/100 虚假信息 (0.0s)
+
+[18/100] EXAGGERATED
+Text: 手机辐射太大，放床头会得脑癌
+  Result: 60/100 可疑 (0.0s)
+
+[19/100] FACTUAL
+Text: 高血压患者应该控制食盐摄入量
+  Result: 95/100 安全 (0.0s)
+
+[20/100] FACTUAL
+Text: 剩饭剩菜需要彻底加热后再食用
+  Result: 95/100 安全 (0.1s)
+
+[21/100] BOUNDARY
+Text: 电视广告上说有一种进口保健品吃了可以治好老年痴呆
+  Result: 60/100 可疑 (0.1s)
+
+[22/100] FACTUAL
+Text: 吸烟有害健康，会增加肺癌风险
+  Result: 95/100 安全 (0.1s)
+
+[23/100] MISINFORMATION
+Text: 微波炉加热食物会破坏营养产生辐射
+  Result: 20/100 虚假信息 (0.0s)
+
+[24/100] EXAGGERATED
+Text: 每天喝醋可以清理血管里的垃圾
+  Result: 15/100 虚假信息 (0.0s)
+
+[25/100] MISINFORMATION
+Text: 喝绿豆汤可以包治百病
+  Result: 20/100 虚假信息 (0.0s)
+
+[26/100] MISINFORMATION
+Text: 红糖水比止痛药更有效地治疗痛经
+  Result: 25/100 虚假信息 (0.0s)
+
+[27/100] MISINFORMATION
+Text: 淋巴排毒按摩可以排出体内毒素
+  Result: 15/100 虚假信息 (0.0s)
+
+[28/100] BOUNDARY
+Text: 小区群里有人说要赶紧交社保补缴费，不然养老金要断了，还附了一个链接
+  Result: 60/100 可疑 (1.8s)
+
+[29/100] MISINFORMATION
+Text: 月球背面有外星人的基地
+  Result: 10/100 虚假信息 (0.1s)
+
+[30/100] MISINFORMATION
+Text: 5G基站辐射会导致癌症和新冠
+  Result: 10/100 虚假信息 (1.9s)
+
+[31/100] EXAGGERATED
+Text: 每天喝红酒可以软化血管，预防心脏病
+  Result: 15/100 虚假信息 (0.1s)
+
+[32/100] FACTUAL
+Text: 定期开窗通风可以保持室内空气清新
+  Result: 95/100 安全 (0.0s)
+
+[33/100] FACTUAL
+Text: 定期刷牙可以预防龋齿和牙周病
+  Result: 95/100 安全 (0.0s)
+
+[34/100] EXAGGERATED
+Text: 白头发拔一根会长三根，千万别拔
+  Result: 50/100 可疑 (0.0s)
+
+[35/100] MISINFORMATION
+Text: 双黄连口服液可以预防新冠病毒
+  Result: 15/100 虚假信息 (1.4s)
+
+[36/100] EXAGGERATED
+Text: 早起空腹喝一杯水可以排毒养颜
+  Result: 60/100 可疑 (0.1s)
+
+[37/100] FACTUAL
+Text: 坚持适度运动可以降低血压
+  Result: 95/100 安全 (0.0s)
+
+[38/100] EXAGGERATED
+Text: 用生姜包在脚底可以治疗感冒
+  Result: 25/100 虚假信息 (0.1s)
+
+[39/100] FACTUAL
+Text: 适当晒太阳可以帮助身体合成维生素D
+  Result: 95/100 安全 (0.1s)
+
+[40/100] MISINFORMATION
+Text: 疫苗里面有毒，打疫苗会让孩子得自闭症
+  Result: 5/100 虚假信息 (1.3s)
+
+[41/100] EXAGGERATED
+Text: 自来水里有氯，烧开后也不能喝
+  Result: 60/100 可疑 (0.1s)
+
+[42/100] FACTUAL
+Text: 喝足够的水有助于身体新陈代谢
+  Result: 95/100 安全 (0.0s)
+
+[43/100] MISINFORMATION
+Text: 艾滋病是美国军方制造的种族灭绝武器
+  Result: 10/100 虚假信息 (0.0s)
+
+[44/100] FACTUAL
+Text: 看手机时间过长容易导致眼睛疲劳
+  Result: 95/100 安全 (0.0s)
+
+[45/100] FACTUAL
+Text: 每天保证七到八小时的睡眠对健康有益
+  Result: 95/100 安全 (0.0s)
+
+[46/100] FACTUAL
+Text: 夏天高温天气要多喝水预防中暑
+  Result: 95/100 安全 (0.0s)
+
+[47/100] BOUNDARY
+Text: 微信群里发了一个链接说免费领取鸡蛋，填个人信息就行
+  Result: 60/100 可疑 (2.3s)
+
+[48/100] EXAGGERATED
+Text: 空腹不能吃香蕉，对心脏不好
+  Result: 60/100 可疑 (0.1s)
+
+[49/100] EXAGGERATED
+Text: 土鸡蛋比超市的洋鸡蛋营养价值高很多
+  Result: 50/100 可疑 (0.0s)
+
+[50/100] EXAGGERATED
+Text: 大蒜生吃可以杀死体内的所有细菌
+  Result: 40/100 可疑 (0.0s)
+
+[51/100] MISINFORMATION
+Text: 地球是平的，宇航员的照片都是假的
+  Result: 5/100 虚假信息 (0.0s)
+
+[52/100] FACTUAL
+Text: 安全带可以在交通事故中保护生命安全
+  Result: 95/100 安全 (1.2s)
+
+[53/100] FACTUAL
+Text: 药品有保质期，过期药品不能服用
+  Result: 95/100 安全 (0.1s)
+
+[54/100] MISINFORMATION
+Text: 非典时期抢盐防辐射
+  Result: 20/100 虚假信息 (0.0s)
+
+[55/100] FACTUAL
+Text: 长期睡眠不足会影响免疫力
+  Result: 95/100 安全 (0.0s)
+
+[56/100] MISINFORMATION
+Text: 吸烟可以预防感染新冠病毒
+  Result: 15/100 虚假信息 (1.2s)
+
+[57/100] EXAGGERATED
+Text: 戴眼镜会让近视度数越来越深
+  Result: 45/100 可疑 (0.1s)
+
+[58/100] MISINFORMATION
+Text: 新冠病毒是中国实验室故意制造的生物武器
+  Result: 10/100 虚假信息 (1.8s)
+
+[59/100] FACTUAL
+Text: 心肺复苏术可以在紧急情况下挽救生命
+  Result: 95/100 安全 (0.1s)
+
+[60/100] EXAGGERATED
+Text: 网上说鸡肉不洗干净都是毒素，要用热水多焯几遍
+  Result: 60/100 可疑 (0.0s)
+
+[61/100] BOUNDARY
+Text: 我姑说多喝茶可以降血压，降压药可以慢慢停掉
+  Result: 60/100 可疑 (0.0s)
+
+[62/100] FACTUAL
+Text: 多吃蔬菜水果有助于补充维生素和膳食纤维
+  Result: 95/100 安全 (0.0s)
+
+[63/100] MISINFORMATION
+Text: 911恐怖袭击是美国政府自导自演的
+  Result: 10/100 虚假信息 (0.0s)
+
+[64/100] FACTUAL
+Text: 过马路要走斑马线，遵守交通规则
+  Result: 95/100 安全 (0.0s)
+
+[65/100] EXAGGERATED
+Text: 隔夜菜会产生亚硝酸盐，吃了会致癌
+  Result: 25/100 虚假信息 (0.0s)
+
+[66/100] EXAGGERATED
+Text: 微波炉加热的食物会产生致癌物
+  Result: 20/100 虚假信息 (0.1s)
+
+[67/100] FACTUAL
+Text: 糖尿病患者需要定期监测血糖水平
+  Result: 95/100 安全 (0.0s)
+
+[68/100] EXAGGERATED
+Text: 芹菜是降压神菜，吃了不用吃降压药
+  Result: 35/100 虚假信息 (0.0s)
+
+[69/100] MISINFORMATION
+Text: 转基因食品会导致癌症和不孕不育
+  Result: 20/100 虚假信息 (0.0s)
+
+[70/100] EXAGGERATED
+Text: 骨头汤补钙效果最好，多喝骨头汤
+  Result: 45/100 可疑 (0.0s)
+
+[71/100] EXAGGERATED
+Text: 味精吃多了会掉头发，还会变笨
+  Result: 25/100 虚假信息 (0.0s)
+
+[72/100] FACTUAL
+Text: 流感季节外出佩戴口罩可以减少感染风险
+  Result: 95/100 安全 (1.2s)
+
+[73/100] BOUNDARY
+Text: 我妈说专家讲牛奶不能和鸡蛋一起吃，会生病
+  Result: 60/100 可疑 (0.1s)
+
+[74/100] MISINFORMATION
+Text: 吃生泥鳅可以清除体内的寄生虫和毒素
+  Result: 5/100 虚假信息 (0.1s)
+
+[75/100] FACTUAL
+Text: 发生火灾时要用湿毛巾捂住口鼻弯腰逃生
+  Result: 95/100 安全 (1.2s)
+
+[76/100] EXAGGERATED
+Text: 味精是化学合成的，吃了对身体有害
+  Result: 25/100 虚假信息 (0.1s)
+
+[77/100] MISINFORMATION
+Text: 喝醋可以软化血管，预防动脉硬化
+  Result: 15/100 虚假信息 (0.0s)
+
+[78/100] EXAGGERATED
+Text: 牛奶和鸡蛋不能一起吃，会中毒
+  Result: 60/100 可疑 (0.0s)
+
+[79/100] MISINFORMATION
+Text: 美国登月是骗局，是在摄影棚里拍的
+  Result: 5/100 虚假信息 (0.0s)
+
+[80/100] FACTUAL
+Text: 老年人应该每年做一次全面体检
+  Result: 95/100 安全 (0.0s)
+
+[81/100] MISINFORMATION
+Text: 吃大量海带可以防核辐射
+  Result: 20/100 虚假信息 (0.0s)
+
+[82/100] FACTUAL
+Text: 北京是中华人民共和国的首都
+  Result: 95/100 安全 (0.0s)
+
+[83/100] MISINFORMATION
+Text: 摇晃婴儿可以治疗脑瘫和发育迟缓
+  Result: 5/100 虚假信息 (0.0s)
+
+[84/100] EXAGGERATED
+Text: 每天必须走够一万步，否则不健康
+  Result: 60/100 可疑 (0.0s)
+
+[85/100] FACTUAL
+Text: 饭后散步有助于消化吸收
+  Result: 95/100 安全 (0.0s)
+
+[86/100] MISINFORMATION
+Text: 食物相克表上说很多食物不能一起吃
+  Result: 20/100 虚假信息 (0.0s)
+
+[87/100] FACTUAL
+Text: 每天坚持适度锻炼比久坐不动更健康
+  Result: 95/100 安全 (0.0s)
+
+[88/100] EXAGGERATED
+Text: 反复烧开的水含有亚硝酸盐，喝了会致癌
+  Result: 45/100 可疑 (0.0s)
+
+[89/100] EXAGGERATED
+Text: 猪油比植物油更健康，因为猪油是天然的
+  Result: 45/100 可疑 (0.0s)
+
+[90/100] FACTUAL
+Text: 情绪激动时血压会升高，老人要注意平复心情
+  Result: 95/100 安全 (0.0s)
+
+[91/100] BOUNDARY
+Text: 我爸说最近看短视频说味精是化学合成的，吃了会致癌，家里不能再吃了
+  Result: 25/100 虚假信息 (1.2s)
+
+[92/100] MISINFORMATION
+Text: 板蓝根可以预防非典和新冠
+  Result: 15/100 虚假信息 (2.6s)
+
+[93/100] EXAGGERATED
+Text: 豆浆不能空腹喝，否则会拉肚子
+  Result: 50/100 可疑 (0.1s)
+
+[94/100] EXAGGERATED
+Text: 喝茶可以解酒，喝醉了就喝茶
+  Result: 45/100 可疑 (0.0s)
+
+[95/100] FACTUAL
+Text: 骨质疏松的老年人需要适当补钙
+  Result: 95/100 安全 (0.0s)
+
+[96/100] FACTUAL
+Text: 勤洗手可以预防流感等传染性疾病
+  Result: 95/100 安全 (1.2s)
+
+[97/100] FACTUAL
+Text: 疫苗接种是预防传染病的有效手段
+  Result: 95/100 安全 (1.3s)
+
+[98/100] EXAGGERATED
+Text: 红枣补血效果特别好，贫血要多吃红枣
+  Result: 45/100 可疑 (0.1s)
+
+[99/100] EXAGGERATED
+Text: 方便面是垃圾食品，吃一次要排毒一个月
+  Result: 45/100 可疑 (0.0s)
+
+[100/100] MISINFORMATION
+Text: 拍打拉筋可以治愈癌症和糖尿病
+  Result: 10/100 虚假信息 (0.0s)
+
+========== BATCH TEST COMPLETE ==========
+
+exaggerated: avg=42.0, errors=0, verdicts={"可疑":21,"虚假信息":9}
+misinformation: avg=12.2, errors=0, verdicts={"虚假信息":30}
+factual: avg=95.0, errors=0, verdicts={"安全":30}
+boundary: avg=51.0, errors=0, verdicts={"诈骗":1,"可疑":7,"`N/{\\_`Nяs^;`fN͑c:y|^y EQRS%cT2Tc:g6R\\O(u R:\\_~y{^ Sexvz㉳Q2c":1,"虚假信息":1}
+
+--- Accuracy ---
+✓ [exaggerated] 45 可疑 | 螃蟹和柿子一起吃会中毒死亡
+✓ [exaggerated] 20 虚假信息 | 绿豆汤可以解百毒，夏天一定要多喝
+✓ [misinformation] 10 虚假信息 | 酸性体质容易得癌症，要多吃碱性食物
+✓ [factual] 95 安全 | 燃气泄漏时要立即开窗通风，不能开关电器
+✓ [boundary] 5 诈骗 | 老人接到电话说中了一等奖，要先交手续费才能领奖
+✓ [exaggerated] 40 可疑 | 阿胶是补血圣品，女人一定要吃
+✓ [misinformation] 10 虚假信息 | 磁铁戴在身上可以吸走身体里的毒素治病
+✓ [factual] 95 安全 | 安全带和头盔可以有效减少交通伤害
+✓ [boundary] 60 可疑 | 我姨说有一种进口精油抹在关节上可以治好关节炎
+✓ [misinformation] 10 虚假信息 | 张悟本说每天生吃茄子可以治百病
+✓ [boundary] 60 可疑 | 我爸听战友说有一种药可以完全治好糖尿病，不用再打针
+✓ [boundary] 60 `N/{\_`Nяs^;`fN͑c:y|^y EQRS%cT2Tc:g6R\O(u R:\_~y{^ Sexvz㉳Q2c | 邻居说最近又出了新的流感病毒变异，特别厉害，赶紧囤药
+✓ [exaggerated] 45 可疑 | 韭菜是壮阳草，男人要多吃
+✓ [misinformation] 5 虚假信息 | 喝漂白水可以治疗新冠肺炎
+✓ [misinformation] 10 虚假信息 | 天线宝宝动画片是在给儿童洗脑
+✓ [misinformation] 10 虚假信息 | 人体内有6公斤宿便，不排出来会中毒
+✓ [misinformation] 5 虚假信息 | 放血疗法可以治愈高血压
+✓ [exaggerated] 60 可疑 | 手机辐射太大，放床头会得脑癌
+✓ [factual] 95 安全 | 高血压患者应该控制食盐摄入量
+✓ [factual] 95 安全 | 剩饭剩菜需要彻底加热后再食用
+✓ [boundary] 60 可疑 | 电视广告上说有一种进口保健品吃了可以治好老年痴呆
+✓ [factual] 95 安全 | 吸烟有害健康，会增加肺癌风险
+✓ [misinformation] 20 虚假信息 | 微波炉加热食物会破坏营养产生辐射
+✓ [exaggerated] 15 虚假信息 | 每天喝醋可以清理血管里的垃圾
+✓ [misinformation] 20 虚假信息 | 喝绿豆汤可以包治百病
+✓ [misinformation] 25 虚假信息 | 红糖水比止痛药更有效地治疗痛经
+✓ [misinformation] 15 虚假信息 | 淋巴排毒按摩可以排出体内毒素
+✓ [boundary] 60 可疑 | 小区群里有人说要赶紧交社保补缴费，不然养老金要断了，还附了一个链接
+✓ [misinformation] 10 虚假信息 | 月球背面有外星人的基地
+✓ [misinformation] 10 虚假信息 | 5G基站辐射会导致癌症和新冠
+✓ [exaggerated] 15 虚假信息 | 每天喝红酒可以软化血管，预防心脏病
+✓ [factual] 95 安全 | 定期开窗通风可以保持室内空气清新
+✓ [factual] 95 安全 | 定期刷牙可以预防龋齿和牙周病
+✓ [exaggerated] 50 可疑 | 白头发拔一根会长三根，千万别拔
+✓ [misinformation] 15 虚假信息 | 双黄连口服液可以预防新冠病毒
+✓ [exaggerated] 60 可疑 | 早起空腹喝一杯水可以排毒养颜
+✓ [factual] 95 安全 | 坚持适度运动可以降低血压
+✓ [exaggerated] 25 虚假信息 | 用生姜包在脚底可以治疗感冒
+✓ [factual] 95 安全 | 适当晒太阳可以帮助身体合成维生素D
+✓ [misinformation] 5 虚假信息 | 疫苗里面有毒，打疫苗会让孩子得自闭症
+✓ [exaggerated] 60 可疑 | 自来水里有氯，烧开后也不能喝
+✓ [factual] 95 安全 | 喝足够的水有助于身体新陈代谢
+✓ [misinformation] 10 虚假信息 | 艾滋病是美国军方制造的种族灭绝武器
+✓ [factual] 95 安全 | 看手机时间过长容易导致眼睛疲劳
+✓ [factual] 95 安全 | 每天保证七到八小时的睡眠对健康有益
+✓ [factual] 95 安全 | 夏天高温天气要多喝水预防中暑
+✓ [boundary] 60 可疑 | 微信群里发了一个链接说免费领取鸡蛋，填个人信息就行
+✓ [exaggerated] 60 可疑 | 空腹不能吃香蕉，对心脏不好
+✓ [exaggerated] 50 可疑 | 土鸡蛋比超市的洋鸡蛋营养价值高很多
+✓ [exaggerated] 40 可疑 | 大蒜生吃可以杀死体内的所有细菌
+✓ [misinformation] 5 虚假信息 | 地球是平的，宇航员的照片都是假的
+✓ [factual] 95 安全 | 安全带可以在交通事故中保护生命安全
+✓ [factual] 95 安全 | 药品有保质期，过期药品不能服用
+✓ [misinformation] 20 虚假信息 | 非典时期抢盐防辐射
+✓ [factual] 95 安全 | 长期睡眠不足会影响免疫力
+✓ [misinformation] 15 虚假信息 | 吸烟可以预防感染新冠病毒
+✓ [exaggerated] 45 可疑 | 戴眼镜会让近视度数越来越深
+✓ [misinformation] 10 虚假信息 | 新冠病毒是中国实验室故意制造的生物武器
+✓ [factual] 95 安全 | 心肺复苏术可以在紧急情况下挽救生命
+✓ [exaggerated] 60 可疑 | 网上说鸡肉不洗干净都是毒素，要用热水多焯几遍
+✓ [boundary] 60 可疑 | 我姑说多喝茶可以降血压，降压药可以慢慢停掉
+✓ [factual] 95 安全 | 多吃蔬菜水果有助于补充维生素和膳食纤维
+✓ [misinformation] 10 虚假信息 | 911恐怖袭击是美国政府自导自演的
+✓ [factual] 95 安全 | 过马路要走斑马线，遵守交通规则
+✓ [exaggerated] 25 虚假信息 | 隔夜菜会产生亚硝酸盐，吃了会致癌
+✓ [exaggerated] 20 虚假信息 | 微波炉加热的食物会产生致癌物
+✓ [factual] 95 安全 | 糖尿病患者需要定期监测血糖水平
+✓ [exaggerated] 35 虚假信息 | 芹菜是降压神菜，吃了不用吃降压药
+✓ [misinformation] 20 虚假信息 | 转基因食品会导致癌症和不孕不育
+✓ [exaggerated] 45 可疑 | 骨头汤补钙效果最好，多喝骨头汤
+✓ [exaggerated] 25 虚假信息 | 味精吃多了会掉头发，还会变笨
+✓ [factual] 95 安全 | 流感季节外出佩戴口罩可以减少感染风险
+✓ [boundary] 60 可疑 | 我妈说专家讲牛奶不能和鸡蛋一起吃，会生病
+✓ [misinformation] 5 虚假信息 | 吃生泥鳅可以清除体内的寄生虫和毒素
+✓ [factual] 95 安全 | 发生火灾时要用湿毛巾捂住口鼻弯腰逃生
+✓ [exaggerated] 25 虚假信息 | 味精是化学合成的，吃了对身体有害
+✓ [misinformation] 15 虚假信息 | 喝醋可以软化血管，预防动脉硬化
+✓ [exaggerated] 60 可疑 | 牛奶和鸡蛋不能一起吃，会中毒
+✓ [misinformation] 5 虚假信息 | 美国登月是骗局，是在摄影棚里拍的
+✓ [factual] 95 安全 | 老年人应该每年做一次全面体检
+✓ [misinformation] 20 虚假信息 | 吃大量海带可以防核辐射
+✓ [factual] 95 安全 | 北京是中华人民共和国的首都
+✓ [misinformation] 5 虚假信息 | 摇晃婴儿可以治疗脑瘫和发育迟缓
+✓ [exaggerated] 60 可疑 | 每天必须走够一万步，否则不健康
+✓ [factual] 95 安全 | 饭后散步有助于消化吸收
+✓ [misinformation] 20 虚假信息 | 食物相克表上说很多食物不能一起吃
+✓ [factual] 95 安全 | 每天坚持适度锻炼比久坐不动更健康
+✓ [exaggerated] 45 可疑 | 反复烧开的水含有亚硝酸盐，喝了会致癌
+✓ [exaggerated] 45 可疑 | 猪油比植物油更健康，因为猪油是天然的
+✓ [factual] 95 安全 | 情绪激动时血压会升高，老人要注意平复心情
+✓ [boundary] 25 虚假信息 | 我爸说最近看短视频说味精是化学合成的，吃了会致癌，家里不能再吃了
+✓ [misinformation] 15 虚假信息 | 板蓝根可以预防非典和新冠
+✓ [exaggerated] 50 可疑 | 豆浆不能空腹喝，否则会拉肚子
+✓ [exaggerated] 45 可疑 | 喝茶可以解酒，喝醉了就喝茶
+✓ [factual] 95 安全 | 骨质疏松的老年人需要适当补钙
+✓ [factual] 95 安全 | 勤洗手可以预防流感等传染性疾病
+✓ [factual] 95 安全 | 疫苗接种是预防传染病的有效手段
+✓ [exaggerated] 45 可疑 | 红枣补血效果特别好，贫血要多吃红枣
+✓ [exaggerated] 45 可疑 | 方便面是垃圾食品，吃一次要排毒一个月
+✓ [misinformation] 10 虚假信息 | 拍打拉筋可以治愈癌症和糖尿病

@@ -45,7 +45,7 @@ function renderTemplate(text: string): string {
     if (value !== undefined) {
       return String(value);
     }
-    return `<!-- missing: ${key} -->`;
+    throw new Error(`Prompt template references missing knowledge-base key: "${key}". Please check prompts/*.md or data/knowledge-base.json.`);
   });
 }
 

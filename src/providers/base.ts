@@ -9,7 +9,7 @@ export interface ChatMessage {
 
 export interface Provider {
   name: string;
-  chat(messages: ChatMessage[]): Promise<string>;
+  chat(messages: ChatMessage[], signal?: AbortSignal, options?: { enableSearch?: boolean }): Promise<string>;
   healthCheck?(): Promise<boolean>;
 }
 

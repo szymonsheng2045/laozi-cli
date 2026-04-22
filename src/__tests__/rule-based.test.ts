@@ -26,14 +26,14 @@ describe("rule-based provider", () => {
     expect(result.credibilityScore).toBeLessThan(30);
   });
 
-  it("returns suspicious for unmatched text", async () => {
+  it("returns needs-verification for unmatched text", async () => {
     const result = await analyze("今天天气不错，适合出去散步");
-    expect(result.verdict).toBe("suspicious");
-    expect(result.credibilityScore).toBe(60);
+    expect(result.verdict).toBe("needs-verification");
+    expect(result.credibilityScore).toBe(70);
   });
 
-  it("returns suspicious for unknown claims", async () => {
+  it("returns needs-verification for unknown claims", async () => {
     const result = await analyze("听说最近有一种新发现可以治百病");
-    expect(result.verdict).toBe("suspicious");
+    expect(result.verdict).toBe("needs-verification");
   });
 });

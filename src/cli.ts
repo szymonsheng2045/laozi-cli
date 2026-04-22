@@ -3,7 +3,8 @@ import { Command } from "commander";
 import { existsSync, writeFileSync } from "node:fs";
 import chalk from "chalk";
 import ora from "ora";
-import { analyzeContent, AnalysisResult } from "./analyzer.js";
+import { analyzeContent } from "./analyzer.js";
+import type { AnalysisResult } from "./types.js";
 import { createProvider, Provider } from "./providers/base.js";
 import { listProviders } from "./providers/registry.js";
 import { loadConfig, saveConfig, configPathDisplay } from "./config.js";
@@ -14,7 +15,8 @@ import { printBanner } from "./banner.js";
 import { resolveProvider } from "./resolve-provider.js";
 import { ensemble, runJudge } from "./judge.js";
 import { startREPL } from "./repl.js";
-import { runFactCheck } from "./fact-check.js";
+import { runFactCheck, buildSearchBasedResult } from "./fact-check.js";
+import { searchPiyao, formatPiyaoMatches } from "./knowledge-base.js";
 import { extractStructured, Extraction } from "./extractor.js";
 import { buildQuestions, Question } from "./questioner.js";
 
@@ -58,22 +60,35 @@ program
   .option("-l, --lang <lang>", "输出语言: zh | en | bilingual", "bilingual")
   .option("--panel", "启用多模型委员会并行分析")
   .option("--no-panel", "禁用多模型委员会，使用单模型")
-  .action(async (text: string, options: { lang: string; panel?: boolean; noPanel?: boolean }) => {
+  .option("--debug-panel", "调试模式：显示各模型独立输出")
+  .action(async (text: string, options: { lang: string; panel?: boolean; noPanel?: boolean; debugPanel?: boolean }) => {
     const config = loadConfig();
     // --panel forces panel on; --no-panel forces panel off; default follows config
     const usePanel = options.panel !== false && (options.panel === true || config.judgePanel.length > 0);
 
-    // Step 1: Fact-check layer
-    let factCheck = { needed: false as boolean, query: "", results: [] as { title: string; url: string; snippet: string }[], summary: "" };
-    try {
-      const fcSpinner = ora("正在判断是否需要联网核查...").start();
-      factCheck = await runFactCheck(text);
-      fcSpinner.stop();
-      if (factCheck.needed) {
-        printFactCheck(factCheck.query, factCheck.results);
-      }
-    } catch {
-      // Graceful fallback: continue without fact-check
+    // Step 1: Fact-check layer (skip in panel mode to save budget for model judges)
+    let factCheck = {
+      needed: false as boolean,
+      query: "",
+      results: [] as { title: string; url: string; snippet: string }[],
+      summary: "",
+      authorityCount: 0,
+      authoritySources: [] as string[],
+      localMatches: [] as { title: string; claim: string; truth: string; sourceUrl: string; publishDate: string }[],
+      localContext: "" as string,
+    };
+
+    // 即使 panel 模式也检索本地辟谣知识库（纯本地计算，不消耗 API 预算）
+    const localMatches = searchPiyao(text, 3);
+    if (localMatches.length > 0) {
+      factCheck.localMatches = localMatches.map(m => ({
+        title: m.title,
+        claim: m.claim,
+        truth: m.truth,
+        sourceUrl: m.sourceUrl,
+        publishDate: m.publishDate,
+      }));
+      factCheck.localContext = formatPiyaoMatches(localMatches);
     }
 
     if (usePanel) {
@@ -86,31 +101,68 @@ program
         process.exit(1);
       }
 
-      // Step 2: Extract structured facts using first provider
+      // Step 2: Extract structured facts — prioritize fast models, serial fallback
       printStage("正在提取结构化事实...", "◆");
-      let firstProvider: Provider;
-      let extraction: Extraction;
-      try {
-        const firstResolved = resolveProvider(panelIds[0]);
-        firstProvider = createProvider({
-          provider: firstResolved.meta.id,
-          apiKey: firstResolved.apiKey,
-          model: firstResolved.model,
-        });
-        extraction = await extractStructured(firstProvider, text);
-        console.log(`  ${chalk.green("✓")} 信息类型: ${extraction.message_type} · 声称: ${extraction.claims.length}条 · 缺口: ${extraction.gaps.length}个`);
-      } catch (extractErr: unknown) {
-        const msg = extractErr instanceof Error ? extractErr.message : String(extractErr);
-        printError(`结构化提取失败: ${msg}`);
+      let firstProvider: Provider | null = null;
+      let extraction!: Extraction;
+      let extractErrors: string[] = [];
+      let extractionSucceeded = false;
+
+      // Fast models first to avoid waiting for slow ones (qwen often >60s)
+      const fastModels = new Set(["kimi", "minimax"]);
+      const extractionOrder = [...panelIds].sort((a, b) => {
+        const aFast = fastModels.has(a) ? 0 : 1;
+        const bFast = fastModels.has(b) ? 0 : 1;
+        return aFast - bFast;
+      });
+
+      for (const id of extractionOrder) {
+        try {
+          const resolved = resolveProvider(id);
+          const provider = createProvider({
+            provider: resolved.meta.id,
+            apiKey: resolved.apiKey,
+            model: resolved.model,
+          });
+          extraction = await extractStructured(provider, text, 18000);
+          firstProvider = provider;
+          extractionSucceeded = true;
+          console.log(`  ${chalk.green("✓")} ${provider.name} 提取成功 | 信息类型: ${extraction.message_type} · 声称: ${extraction.claims.length}条 · 缺口: ${extraction.gaps.length}个`);
+          break;
+        } catch (e: any) {
+          const msg = e instanceof Error ? e.message : String(e);
+          extractErrors.push(`${id}: ${msg}`);
+          console.log(`  ${chalk.yellow("⚠")} ${id} 提取失败: ${msg.slice(0, 60)}`);
+        }
+      }
+
+      if (!extractionSucceeded || !firstProvider) {
+        printError(`所有模型提取均失败:\n${extractErrors.slice(0, 3).join("\n")}`);
+
+        // 优先基于搜索结果直接判定（权威媒体 safe / 有结果 70分），避免规则引擎信息丢失
+        const searchResult = buildSearchBasedResult(factCheck, options.lang || config.language);
+        if (searchResult) {
+          printResult(searchResult, options.lang || config.language);
+          saveHistoryEntry({
+            id: Math.random().toString(36).slice(2),
+            timestamp: new Date().toISOString(),
+            inputType: "text",
+            inputPreview: text,
+            result: searchResult,
+          });
+          process.exit(0);
+        }
+
         printInfo("正在 fallback 到本地规则引擎...");
         try {
-          const { provider } = await getProvider();
+          const provider = createProvider({ provider: "rule-based", model: "local-rules" });
           const result = await analyzeContent(provider, config, text);
           printResult(result as AnalysisResult, options.lang || config.language);
-        } catch {
-          printError("本地规则引擎也无法启动。");
+          process.exit(0);
+        } catch (fbErr: any) {
+          printError("本地规则引擎也无法启动: " + (fbErr.message || String(fbErr)));
+          process.exit(1);
         }
-        return;
       }
 
       // Step 3: Ask follow-up questions (skip in non-TTY batch mode)
@@ -147,14 +199,21 @@ program
 
       // Step 4: Parallel judge with per-model progress
       printStage(`启动 ${panelIds.length} 模型委员会分析`, "◆");
+      let results: (AnalysisResult | null)[] = [];
+      let validResults: AnalysisResult[] = [];
       try {
         const providers: Provider[] = [];
         for (const id of panelIds) {
-          const resolved = resolveProvider(id);
-          providers.push(createProvider({ provider: resolved.meta.id, apiKey: resolved.apiKey, model: resolved.model }));
+          try {
+            const resolved = resolveProvider(id);
+            providers.push(createProvider({ provider: resolved.meta.id, apiKey: resolved.apiKey, model: resolved.model }));
+          } catch {
+            console.log(`  ${chalk.yellow("⚠")} ${id.padEnd(18)} 配置缺失，跳过`);
+          }
         }
 
         const searchCtx = factCheck.needed ? factCheck.summary : undefined;
+        const localCtx = factCheck.localContext || undefined;
         const modelStatuses = new Map<string, "running" | "done" | "error">();
         providers.forEach((p) => modelStatuses.set(p.name, "running"));
 
@@ -163,18 +222,24 @@ program
           printModelProgress(p.name, "running");
         });
 
-        const results = await Promise.all(
-          providers.map(async (p) => {
-            try {
-              const r = await runJudge(p, text, extraction, supplementary || undefined, undefined);
-              modelStatuses.set(p.name, "done");
-              return r;
-            } catch (e: any) {
-              modelStatuses.set(p.name, "error");
-              return null;
-            }
-          })
-        );
+        // 35s overall fuse: don't wait forever for the slowest provider
+        const PANEL_TIMEOUT_MS = 45000;
+        results = new Array(providers.length).fill(null);
+
+        const judgePromises = providers.map(async (p, i) => {
+          try {
+            const r = await runJudge(p, text, extraction, supplementary || undefined, undefined, searchCtx, localCtx);
+            modelStatuses.set(p.name, "done");
+            results[i] = r;
+          } catch {
+            modelStatuses.set(p.name, "error");
+          }
+        });
+
+        await Promise.race([
+          Promise.all(judgePromises),
+          new Promise<void>((resolve) => setTimeout(() => resolve(), PANEL_TIMEOUT_MS))
+        ]);
 
         // Redraw final status
         console.log("");
@@ -183,10 +248,30 @@ program
         });
         console.log("");
 
-        const validResults = results.filter((r): r is NonNullable<typeof r> => r !== null);
+        validResults = results.filter((r): r is NonNullable<typeof r> => r !== null);
+
+        // Debug mode: print each model's raw output
+        if (options.debugPanel) {
+          console.log("\n" + chalk.hex("#c9a961")("──────────────────────────────────────────────────────────────────"));
+          console.log(chalk.bold("  【debug-panel 各模型独立输出】\n"));
+          providers.forEach((p, i) => {
+            const r = results[i];
+            if (r) {
+              console.log(`  ${chalk.green("●")} ${p.name}`);
+              console.log(`    verdict: ${r.verdict}, score: ${r.credibilityScore}`);
+              console.log(`    flags: ${r.redFlags.map((f: { zh: string }) => f.zh).join("; ") || "无"}`);
+              console.log(`    summary: ${r.summary?.zh || ""}`);
+            } else {
+              console.log(`  ${chalk.red("○")} ${p.name} — 失败`);
+            }
+            console.log("");
+          });
+          console.log(chalk.hex("#c9a961")("──────────────────────────────────────────────────────────────────\n"));
+        }
+
         if (validResults.length === 0) {
-          printError("所有模型分析均失败。");
-          process.exit(1);
+          printError("所有模型分析均失败，尝试单模型 fallback...");
+          throw new Error("panel-fallback-to-single");
         }
 
         const result = ensemble(validResults);
@@ -198,10 +283,37 @@ program
           inputPreview: text,
           result,
         });
+        process.exit(0);
       } catch (err: any) {
-        printError(err.message || String(err));
-        process.exit(1);
+        if (err.message === "panel-fallback-to-single") {
+          // Fallback to single-provider analysis
+        } else {
+          printError(err.message || String(err));
+          process.exit(1);
+        }
       }
+
+      if (validResults.length === 0) {
+        // Direct fallback to rule-based: single-provider would likely hit the same slowness
+        printInfo("模型分析超时，直接 fallback 到本地规则引擎...");
+        try {
+          const provider = createProvider({ provider: "rule-based", model: "local-rules" });
+          const result = await analyzeContent(provider, config, text);
+          printResult(result as AnalysisResult, options.lang || config.language);
+          saveHistoryEntry({
+            id: Math.random().toString(36).slice(2),
+            timestamp: new Date().toISOString(),
+            inputType: "text",
+            inputPreview: text,
+            result,
+          });
+          process.exit(0);
+        } catch (fbErr: any) {
+          printError("本地规则引擎也无法启动: " + (fbErr.message || String(fbErr)));
+          process.exit(1);
+        }
+      }
+
       return;
     }
 
@@ -213,7 +325,14 @@ program
     } catch (resolveErr: unknown) {
       const msg = resolveErr instanceof Error ? resolveErr.message : String(resolveErr);
       printError(msg);
-      process.exit(1);
+      // Fallback to rule-based if configured provider fails
+      printInfo("配置的模型不可用，尝试本地规则引擎...");
+      try {
+        provider = createProvider({ provider: "rule-based", model: "local-rules" });
+      } catch (fbErr: any) {
+        printError("本地规则引擎也无法启动: " + (fbErr.message || String(fbErr)));
+        process.exit(1);
+      }
     }
 
     const spinner = ora("正在分析内容...").start();
@@ -232,8 +351,24 @@ program
     } catch (err: unknown) {
       spinner.stop();
       const msg = err instanceof Error ? err.message : String(err);
-      printError(msg);
-      process.exit(1);
+      printError(`分析失败: ${msg}`);
+      // Final fallback: rule-based
+      printInfo("尝试本地规则引擎 fallback...");
+      try {
+        const fallbackProvider = createProvider({ provider: "rule-based", model: "local-rules" });
+        const result = await analyzeContent(fallbackProvider, config, text);
+        printResult(result as AnalysisResult, options.lang || config.language);
+        saveHistoryEntry({
+          id: Math.random().toString(36).slice(2),
+          timestamp: new Date().toISOString(),
+          inputType: "text",
+          inputPreview: text,
+          result,
+        });
+      } catch (fbErr: any) {
+        printError("本地规则引擎也无法启动: " + (fbErr.message || String(fbErr)));
+        process.exit(1);
+      }
     }
   });
 
@@ -254,7 +389,8 @@ program
     }
 
     // Whisper currently requires OpenAI-compatible API key
-    if (!config.apiKey) {
+    const hasAnyKey = config.apiKey || Object.values(config.keys || {}).some((k) => k);
+    if (!hasAnyKey) {
       printError(
         `语音转录需要配置 OpenAI 兼容 API Key。\n` +
           `您可以：\n` +
@@ -290,6 +426,15 @@ program
         process.exit(1);
       }
 
+      // 检索本地辟谣知识库（纯本地计算）
+      let voiceLocalContext: string | undefined;
+      try {
+        const voiceFactCheck = await runFactCheck(transcript);
+        voiceLocalContext = voiceFactCheck.localContext || undefined;
+      } catch {
+        // 忽略错误，继续无本地匹配
+      }
+
       // Extract
       printStage("正在提取结构化事实...", "◆");
       let firstProvider: Provider;
@@ -305,18 +450,36 @@ program
       } catch (extractErr: unknown) {
         const msg = extractErr instanceof Error ? extractErr.message : String(extractErr);
         printError(`结构化提取失败: ${msg}`);
-        printInfo("正在 fallback 到本地规则引擎...");
-        let provider: Provider;
+
+        // voice 命令 fallback：也尝试用搜索结果做判定
         try {
-          const resolved = await getProvider();
-          provider = resolved.provider;
+          const voiceFactCheck = await runFactCheck(transcript);
+          const searchResult = buildSearchBasedResult(voiceFactCheck, options.lang || config.language);
+          if (searchResult) {
+            printResult(searchResult, options.lang || config.language);
+            saveHistoryEntry({
+              id: Math.random().toString(36).slice(2),
+              timestamp: new Date().toISOString(),
+              inputType: "voice",
+              inputPreview: transcript,
+              result: searchResult,
+            });
+            process.exit(0);
+          }
         } catch {
-          printError("本地规则引擎也无法启动。");
+          // 搜索也失败了，继续 fallback 到规则引擎
+        }
+
+        printInfo("正在 fallback 到本地规则引擎...");
+        try {
+          const provider = createProvider({ provider: "rule-based", model: "local-rules" });
+          const result = await analyzeContent(provider, config, transcript);
+          printResult(result, options.lang || config.language);
+          process.exit(0);
+        } catch (fbErr: any) {
+          printError("本地规则引擎也无法启动: " + (fbErr.message || String(fbErr)));
           process.exit(1);
         }
-        const result = await analyzeContent(provider, config, transcript);
-        printResult(result, options.lang || config.language);
-        process.exit(0);
       }
       console.log(`  ${chalk.green("✓")} 信息类型: ${extraction.message_type} · 声称: ${extraction.claims.length}条 · 缺口: ${extraction.gaps.length}个`);
 
@@ -364,8 +527,8 @@ program
       if (providers.length === 0) {
         printError("所有模型配置均不可用，fallback 到本地规则引擎。");
         try {
-          const resolved = await getProvider();
-          const result = await analyzeContent(resolved.provider, config, transcript);
+          const provider = createProvider({ provider: "rule-based", model: "local-rules" });
+          const result = await analyzeContent(provider, config, transcript);
           printResult(result, options.lang || config.language);
           process.exit(0);
         } catch {
@@ -379,7 +542,7 @@ program
       const results = await Promise.all(
         providers.map(async (p) => {
           try {
-            const r = await runJudge(p, transcript, extraction, supplementary || undefined);
+            const r = await runJudge(p, transcript, extraction, supplementary || undefined, undefined, undefined, voiceLocalContext);
             return r;
           } catch (e: any) {
             console.log(`    ${chalk.red("✗")} ${p.name.padEnd(18)} ${chalk.gray(e.message || "失败")}`);
@@ -398,8 +561,8 @@ program
       if (validResults.length === 0) {
         printError("所有模型分析均失败，fallback 到本地规则引擎。");
         try {
-          const resolved = await getProvider();
-          const result = await analyzeContent(resolved.provider, config, transcript);
+          const provider = createProvider({ provider: "rule-based", model: "local-rules" });
+          const result = await analyzeContent(provider, config, transcript);
           printResult(result, options.lang || config.language);
           process.exit(0);
         } catch {
@@ -460,6 +623,7 @@ program
   .option("--whisper-model <model>", "设置语音转文字模型")
   .option("--language <lang>", "默认输出语言: zh | en | bilingual")
   .option("--judge-panel <list>", "多模型委员会，逗号分隔，如 qwen,kimi,zhipu,minimax")
+  .option("--tavily-api-key <key>", "设置 Tavily 搜索 API Key（用于事实核查联网搜索）")
   .action((options) => {
     const updates: any = {};
     if (options.provider !== undefined) updates.provider = options.provider;
@@ -474,6 +638,7 @@ program
         .map((s: string) => s.trim())
         .filter(Boolean);
     }
+    if (options.tavilyApiKey !== undefined) updates.tavilyApiKey = options.tavilyApiKey;
 
     // Provider-specific key: --key qwen:sk-xxx
     if (options.key !== undefined) {

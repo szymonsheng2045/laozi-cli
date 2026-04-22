@@ -2,12 +2,8 @@ import { Provider } from "./providers/base.js";
 import { loadPrompt } from "./prompts.js";
 import { Extraction } from "./extractor.js";
 import { extractJson } from "./utils.js";
-
-export interface Question {
-  zh: string;
-  en: string;
-  target_gap: string;
-}
+import type { Question } from "./types.js";
+export type { Question } from "./types.js";
 
 export async function buildQuestions(
   provider: Provider,

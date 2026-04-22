@@ -1,4 +1,5 @@
 import chalk from "chalk";
+import type { AnalysisResult } from "./types.js";
 
 export function printError(msg: string) {
   console.error(chalk.red("\n✖ Error: " + msg + "\n"));
@@ -21,6 +22,7 @@ function scoreBar(score: number): string {
 function verdictEmoji(verdict: string): string {
   switch (verdict) {
     case "safe": return "🟢";
+    case "needs-verification": return "🔵";
     case "suspicious": return "🟡";
     case "misinformation": return "🟠";
     case "scam": return "🔴";
@@ -32,6 +34,7 @@ function verdictEmoji(verdict: string): string {
 function verdictColor(verdict: string): any {
   switch (verdict) {
     case "safe": return chalk.green;
+    case "needs-verification": return chalk.hex("#87CEEB");
     case "suspicious": return chalk.yellow;
     case "misinformation": return chalk.hex("#FFA500");
     case "scam": return chalk.red;
@@ -42,20 +45,12 @@ function verdictColor(verdict: string): any {
 function verdictLabel(verdict: string): string {
   switch (verdict) {
     case "safe": return "安全 / Safe";
+    case "needs-verification": return "需核实 / Needs Verification";
     case "suspicious": return "可疑 / Suspicious";
     case "misinformation": return "虚假信息 / Misinformation";
     case "scam": return "诈骗 / Scam";
     default: return verdict;
   }
-}
-
-export interface AnalysisResult {
-  credibilityScore: number;
-  verdict: "safe" | "suspicious" | "misinformation" | "scam";
-  redFlags: { zh: string; en: string }[];
-  elderExplanation: { zh: string; en: string };
-  actionSuggestion: { zh: string; en: string };
-  summary: { zh: string; en: string };
 }
 
 export function printResult(result: AnalysisResult, lang: string = "bilingual") {

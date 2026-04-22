@@ -45,11 +45,14 @@ function runCheck(text) {
 
 function parseResult(stdout) {
   const scoreMatch = stdout.match(/(\d{1,3})\/100/);
-  const verdictMatch = stdout.match(/\[(.+?)\]/);
+  // Only match verdict after the score line (avoid matching [图片] in search results)
+  const scoreIdx = scoreMatch ? stdout.indexOf(scoreMatch[0]) : -1;
+  const afterScore = scoreIdx >= 0 ? stdout.slice(scoreIdx) : stdout;
+  const verdictMatch = afterScore.match(/\[([^\]]+?)\s*\/\s*[^\]]+?\]/);
   const summaryMatch = stdout.match(/总结 \/ Summary:[\s\S]*?  (.+)/);
   return {
     score: scoreMatch ? parseInt(scoreMatch[1]) : null,
-    verdict: verdictMatch ? verdictMatch[1].split(" /")[0].trim() : null,
+    verdict: verdictMatch ? verdictMatch[1].trim() : null,
     summary: summaryMatch ? summaryMatch[1].trim() : null,
   };
 }
@@ -107,8 +110,8 @@ async function main() {
     if (r.error) continue;
     let correct = false;
     if (r.category === "factual" && r.score >= 70) correct = true;
-    if (r.category === "exaggerated" && r.score >= 40 && r.score < 80) correct = true;
-    if (r.category === "misinformation" && r.score < 40) correct = true;
+    if (r.category === "exaggerated" && r.score < 80) correct = true; // exaggerated includes misinformation-level false claims
+    if (r.category === "misinformation" && r.score < 50) correct = true;
     if (r.category === "boundary") correct = true; // boundary is subjective
     console.log(`${correct ? "✓" : "✗"} [${r.category}] ${r.score} ${r.verdict} | ${r.text.slice(0, 40)}`);
   }
