@@ -90,3 +90,20 @@ export function saveConfig(config: Partial<Config>): void {
 export function configPathDisplay(): string {
   return configPath;
 }
+
+function maskSecret(value: string): string {
+  if (!value) return "";
+  if (value.length <= 8) return "***";
+  return `${value.slice(0, 6)}***${value.slice(-2)}`;
+}
+
+export function getRedactedConfig(config: Config): Config {
+  return {
+    ...config,
+    apiKey: maskSecret(config.apiKey),
+    keys: Object.fromEntries(
+      Object.entries(config.keys || {}).map(([provider, key]) => [provider, maskSecret(key)])
+    ),
+    tavilyApiKey: maskSecret(config.tavilyApiKey),
+  };
+}

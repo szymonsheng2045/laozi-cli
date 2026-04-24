@@ -19,6 +19,8 @@ LAOZI.CLI bridges that gap. Paste (or voice-transcribe) the suspicious content, 
 
 ### One-line install
 
+> macOS / Linux only
+
 ```bash
 curl -fsSL https://laozi.art/install.sh | bash
 ```
@@ -28,6 +30,16 @@ curl -fsSL https://laozi.art/install.sh | bash
 ```bash
 git clone https://github.com/szymonsheng2045/laozi-cli.git ~/.laozi-cli
 cd ~/.laozi-cli
+npm install
+npm run build
+npm link
+```
+
+### Windows (PowerShell)
+
+```powershell
+git clone https://github.com/szymonsheng2045/laozi-cli.git $HOME\.laozi-cli
+cd $HOME\.laozi-cli
 npm install
 npm run build
 npm link
@@ -73,6 +85,17 @@ laozi config --provider openai --api-key <YOUR_KEY> --base-url https://api.opena
 
 Other compatible services: DeepSeek, Moonshot (Kimi), Qwen, etc.
 
+### API Key Safety
+
+- API keys are stored in `~/.laozi/config.json`, not in the repository.
+- Prefer environment variables for shared or demo machines:
+  - `DASHSCOPE_API_KEY`
+  - `OPENAI_API_KEY`
+  - `DEEPSEEK_API_KEY`
+  - `GEMINI_API_KEY`
+- `laozi config` and REPL `/config` mask secrets before printing them.
+- Never commit `~/.laozi/config.json`, screenshots of `/config`, or shell history containing keys.
+
 ## Usage
 
 ### Analyze text
@@ -110,6 +133,12 @@ laozi history --clear  # clear all history
 laozi export                    # export latest to laozi-report.md
 laozi export ~/Desktop/report.md
 ```
+
+### Clipboard Support
+
+- macOS: built-in
+- Windows: built-in via PowerShell `Set-Clipboard`
+- Linux: requires `xclip`
 
 ## Example Output
 

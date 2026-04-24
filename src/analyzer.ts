@@ -2,6 +2,7 @@ import { Provider } from "./providers/base.js";
 import { Config } from "./config.js";
 import type { AnalysisResult } from "./types.js";
 import { searchPiyao, formatPiyaoMatches } from "./knowledge-base.js";
+import { extractJson } from "./utils.js";
 
 const systemPrompt = `You are a digital safety assistant for families. Your job is to analyze messages, articles, or voice transcripts that elderly people (60+) might encounter on the Chinese internet (WeChat, Douyin, short videos, health groups, etc.).
 
@@ -34,27 +35,6 @@ Guidelines:
 - If "Local Knowledge Base Matches" are provided below, prioritize them in your judgment as they come from the official 中国互联网联合辟谣平台.
 
 Output ONLY the JSON. No markdown code blocks, no extra text before or after.`;
-
-function extractJson(raw: string): string {
-  // Try direct parse first
-  const trimmed = raw.trim();
-  if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
-    return trimmed;
-  }
-  // Try extracting from markdown code block
-  const codeBlockMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (codeBlockMatch) {
-    const inner = codeBlockMatch[1].trim();
-    if (inner.startsWith("{")) return inner;
-  }
-  // Try finding first { and last }
-  const start = trimmed.indexOf("{");
-  const end = trimmed.lastIndexOf("}");
-  if (start !== -1 && end !== -1 && end > start) {
-    return trimmed.slice(start, end + 1);
-  }
-  throw new Error("No JSON object found in response");
-}
 
 function normalizeResult(parsed: Record<string, unknown>): AnalysisResult {
   const score = typeof parsed.credibilityScore === "number" ? parsed.credibilityScore : 50;

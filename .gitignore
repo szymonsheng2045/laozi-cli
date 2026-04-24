@@ -18,3 +18,5 @@ test-report.txt
 test-run.log
 parallel-*.log
 retry-*.log
+PROJECT_GUIDE.md
+test-*.js

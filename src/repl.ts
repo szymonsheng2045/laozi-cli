@@ -1,13 +1,14 @@
 import readline from "node:readline";
+import { execFileSync } from "node:child_process";
 import chalk from "chalk";
-import { loadConfig } from "./config.js";
+import { loadConfig, getRedactedConfig } from "./config.js";
 import { createProvider, Provider } from "./providers/base.js";
 import { resolveProvider } from "./resolve-provider.js";
 import { printResult, printInfo, printError, printFactCheck, printStage, printModelProgress } from "./printer.js";
 import { ensemble, runJudge } from "./judge.js";
 import type { AnalysisResult, FactCheckContext } from "./types.js";
 import { saveHistoryEntry } from "./history.js";
-import { runFactCheck } from "./fact-check.js";
+import { runFactCheck, buildSearchBasedResult } from "./fact-check.js";
 import { SessionMemory } from "./session.js";
 import { extractStructured, Extraction } from "./extractor.js";
 import { buildQuestions } from "./questioner.js";
@@ -27,6 +28,12 @@ function completer(line: string): [string[], string] {
 }
 
 // Simple stderr spinner — does NOT interfere with readline stdout
+function clearTransientLine(stream: NodeJS.WriteStream) {
+  if (!stream.isTTY) return;
+  readline.clearLine(stream, 0);
+  readline.cursorTo(stream, 0);
+}
+
 function createSpinner(label: string) {
   const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
   let i = 0;
@@ -37,9 +44,27 @@ function createSpinner(label: string) {
   return {
     stop: () => {
       clearInterval(interval);
-      process.stderr.write(`\r${" ".repeat(label.length + 6)}\r`);
+      clearTransientLine(process.stderr);
     },
   };
+}
+
+function copyToClipboard(text: string): void {
+  if (process.platform === "darwin") {
+    execFileSync("pbcopy", { input: text });
+    return;
+  }
+
+  if (process.platform === "win32") {
+    execFileSync(
+      "powershell",
+      ["-NoProfile", "-Command", "Set-Clipboard -Value ([Console]::In.ReadToEnd())"],
+      { input: text }
+    );
+    return;
+  }
+
+  execFileSync("xclip", ["-selection", "clipboard"], { input: text });
 }
 
 async function safeExtract(provider: Provider, text: string): Promise<Extraction> {
@@ -70,8 +95,21 @@ export async function startREPL() {
     completer,
   });
 
+  const beginBackgroundOutput = () => {
+    clearTransientLine(process.stderr);
+    clearTransientLine(process.stdout);
+    rl.pause();
+  };
+
+  const endBackgroundOutput = () => {
+    rl.resume();
+  };
+
   const askQuestion = (q: string): Promise<string> => {
     return new Promise((resolve) => {
+      clearTransientLine(process.stderr);
+      clearTransientLine(process.stdout);
+      process.stdout.write("\n");
       rl.question(chalk.hex("#c9a961")(`  [追问] `) + chalk.bold(q) + " ", (answer) => {
         resolve(answer.trim());
       });
@@ -121,7 +159,7 @@ export async function startREPL() {
     }
     if (text === "/config") {
       console.log("");
-      console.log(JSON.stringify(config, null, 2));
+      console.log(JSON.stringify(getRedactedConfig(config), null, 2));
       console.log("");
       rl.prompt();
       return;
@@ -156,11 +194,10 @@ export async function startREPL() {
 建议：${r.actionSuggestion.zh}
 总结：${r.summary.zh}`;
         try {
-          const { execSync } = await import("node:child_process");
-          execSync(`echo ${JSON.stringify(textToCopy)} | pbcopy`);
+          copyToClipboard(textToCopy);
           printInfo("分析结果已复制到剪贴板");
         } catch {
-          printError("复制失败，请手动复制上方内容");
+          printError("复制失败，请手动复制上方内容。Linux 下请确保已安装 xclip。");
         }
       }
       rl.prompt();
@@ -199,11 +236,17 @@ export async function startREPL() {
     if (followUpRound > 0 && followUpRound <= 5 && lastExtraction && lastResult) {
       followUpRound++;
       const roundLabel = followUpRound - 1;
-      printStage(`追问第 ${roundLabel}/5 轮`, "?");
+      beginBackgroundOutput();
 
       try {
+        printStage(`追问第 ${roundLabel}/5 轮`, "?");
         const resolved = resolveProvider(config.provider !== "rule-based" ? config.provider : "qwen");
-        const provider = createProvider({ provider: resolved.meta.id, apiKey: resolved.apiKey, model: resolved.model });
+        const provider = createProvider({
+          provider: resolved.meta.id,
+          apiKey: resolved.apiKey,
+          model: resolved.model,
+          baseURL: resolved.meta.baseURL,
+        });
 
         const answer = await runFollowUp(provider, lastOriginalText, lastExtraction, lastResult, text, roundLabel);
         console.log("");
@@ -222,6 +265,8 @@ export async function startREPL() {
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         printError(msg);
+      } finally {
+        endBackgroundOutput();
       }
 
       rl.prompt();
@@ -266,8 +311,10 @@ export async function startREPL() {
             provider: firstResolved.meta.id,
             apiKey: firstResolved.apiKey,
             model: firstResolved.model,
+            baseURL: firstResolved.meta.baseURL,
           });
           extraction = await safeExtract(firstProvider, text);
+          spinner.stop();
           console.log("  ◆   [2/4] 结构化提取... ✓");
           console.log(`        信息类型: ${extraction.message_type} · 声称: ${extraction.claims.length}条 · 缺口: ${extraction.gaps.length}个`);
         } catch (extractErr: unknown) {
@@ -295,8 +342,11 @@ export async function startREPL() {
         if (extraction.gaps.length > 0) {
           let questions: import("./questioner.js").Question[] = [];
           try {
+            spinner = createSpinner("分析中...");
             questions = await buildQuestions(firstProvider!, extraction);
+            spinner.stop();
           } catch {
+            spinner.stop();
             questions = [];
           }
 
@@ -320,12 +370,20 @@ export async function startREPL() {
         }
 
         // Step 4: Parallel judge
+        spinner.stop();
         console.log(`  ◆   [4/4] 多模型裁决... (${panelIds.length} 模型并行)`);
         const providers: Provider[] = [];
         for (const id of panelIds) {
           try {
             const resolved = resolveProvider(id);
-            providers.push(createProvider({ provider: resolved.meta.id, apiKey: resolved.apiKey, model: resolved.model }));
+            providers.push(
+              createProvider({
+                provider: resolved.meta.id,
+                apiKey: resolved.apiKey,
+                model: resolved.model,
+                baseURL: resolved.meta.baseURL,
+              })
+            );
           } catch (resolveErr: any) {
             console.log(`  ${chalk.yellow("⚠")} ${id.padEnd(18)} 配置缺失，跳过`);
           }
@@ -350,19 +408,30 @@ export async function startREPL() {
         providers.forEach((p) => modelStatuses.set(p.name, "running"));
         providers.forEach((p) => printModelProgress(p.name, "running"));
 
-        const results = await Promise.all(
-          providers.map(async (p) => {
-            try {
-              const r = await runJudge(p, text, extraction, supplementary || undefined, sessionCtx, searchCtx, localCtx);
-              modelStatuses.set(p.name, "done");
-              return r;
-            } catch (e: any) {
-              modelStatuses.set(p.name, "error");
-              console.log(`    ${chalk.red("✗")} ${p.name.padEnd(18)} ${chalk.gray(e.message || "失败")}`);
-              return null;
-            }
-          })
-        );
+        // 45s overall fuse: don't wait forever for the slowest provider
+        const PANEL_TIMEOUT_MS = 45000;
+        const panelResults: (AnalysisResult | null)[] = new Array(providers.length).fill(null);
+
+        const judgePromises = providers.map(async (p, i) => {
+          try {
+            const r = await runJudge(p, text, extraction, supplementary || undefined, sessionCtx, searchCtx, localCtx);
+            modelStatuses.set(p.name, "done");
+            panelResults[i] = r;
+          } catch (e: any) {
+            modelStatuses.set(p.name, "error");
+            console.log(`    ${chalk.red("✗")} ${p.name.padEnd(18)} ${chalk.gray(e.message || "失败")}`);
+          }
+        });
+
+        let raceTimeout: ReturnType<typeof setTimeout>;
+        const timeoutPromise = new Promise<void>((resolve) => {
+          raceTimeout = setTimeout(() => resolve(), PANEL_TIMEOUT_MS);
+        });
+
+        await Promise.race([Promise.all(judgePromises), timeoutPromise]);
+        clearTimeout(raceTimeout!);
+
+        const results = panelResults;
 
         console.log("");
         providers.forEach((p) => {
@@ -403,6 +472,7 @@ export async function startREPL() {
         console.log(chalk.hex("#c9a961")("  ★ 分析完成。您可以继续追问（最多5轮），或输入 /done 结束\n"));
       } else {
         // Single-provider / rule-based mode
+        spinner.stop();
         console.log("  ◆   [2/4] 规则引擎分析... ✓ (本地模式)");
         let provider: Provider;
         try {
@@ -450,13 +520,13 @@ async function getSingleProvider() {
     provider: resolved.meta.id,
     apiKey: resolved.apiKey,
     model: resolved.model,
+    baseURL: resolved.meta.baseURL,
   });
 
   if (provider.healthCheck) {
     const ok = await provider.healthCheck();
     if (!ok) {
-      printError(`${provider.name} 服务未运行或无法连接。`);
-      process.exit(1);
+      throw new Error(`${provider.name} 服务未运行或无法连接。`);
     }
   }
 

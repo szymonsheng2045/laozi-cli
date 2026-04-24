@@ -1,3 +1,4 @@
+import type { Config } from "./config.js";
 import { loadConfig } from "./config.js";
 import { getProviderMeta, ProviderMeta } from "./providers/registry.js";
 
@@ -7,16 +8,18 @@ export interface ResolvedProvider {
   model: string;
 }
 
-export function resolveProvider(
+export function resolveProviderFromConfig(
+  config: Config,
   providerId?: string,
   apiKey?: string,
   model?: string
 ): ResolvedProvider {
-  const config = loadConfig();
   const finalProviderId = providerId || config.provider;
+  const applyConfiguredOverrides = providerId === undefined || finalProviderId === config.provider;
 
   // Special case: rule-based provider
   if (finalProviderId === "rule-based") {
+    const modelOverride = model || (applyConfiguredOverrides ? config.model : "");
     return {
       meta: {
         id: "rule-based",
@@ -28,47 +31,61 @@ export function resolveProvider(
         region: "global",
       },
       apiKey: "",
-      model: model || config.model || "local-rules",
+      model: modelOverride || "local-rules",
     };
   }
 
-  const meta = getProviderMeta(finalProviderId);
+  const registryMeta = getProviderMeta(finalProviderId);
 
-  if (!meta) {
+  if (!registryMeta) {
     throw new Error(`Unknown provider: ${finalProviderId}`);
   }
 
   // Priority: explicit arg > provider-specific key > global config key > env var
   let finalKey = apiKey || "";
-  if (!finalKey && config.keys && config.keys[meta.id]) {
-    finalKey = config.keys[meta.id];
+  if (!finalKey && config.keys && config.keys[registryMeta.id]) {
+    finalKey = config.keys[registryMeta.id];
   }
   if (!finalKey) {
     finalKey = config.apiKey || "";
   }
-  if (!finalKey && meta.envKey) {
-    finalKey = process.env[meta.envKey] || "";
+  if (!finalKey && registryMeta.envKey) {
+    finalKey = process.env[registryMeta.envKey] || "";
   }
 
   // Local models don't require API keys
-  if (meta.type !== "local" && !finalKey) {
-    const sources = meta.envKey
-      ? `config file (keys.${meta.id} or apiKey) or environment variable ${meta.envKey}`
+  if (registryMeta.type !== "local" && !finalKey) {
+    const sources = registryMeta.envKey
+      ? `config file (keys.${registryMeta.id} or apiKey) or environment variable ${registryMeta.envKey}`
       : "config file";
     throw new Error(
-      `Provider "${meta.name}" requires an API key.\n` +
+      `Provider "${registryMeta.name}" requires an API key.\n` +
         `Please configure it via: laozi config --api-key <key>\n` +
         `Or set the ${sources}.`
     );
   }
 
-  const rawModel = model || config.model;
+  const rawModel = model || (applyConfiguredOverrides ? config.model : "");
   const finalModel =
-    rawModel && rawModel !== "local-rules" ? rawModel : meta.defaultModel;
+    rawModel && rawModel !== "local-rules" ? rawModel : registryMeta.defaultModel;
+  const finalBaseURL =
+    (applyConfiguredOverrides ? config.baseURL : "") || registryMeta.baseURL;
+  const meta =
+    finalBaseURL === registryMeta.baseURL
+      ? registryMeta
+      : { ...registryMeta, baseURL: finalBaseURL };
 
   return {
     meta,
     apiKey: finalKey,
     model: finalModel,
   };
+}
+
+export function resolveProvider(
+  providerId?: string,
+  apiKey?: string,
+  model?: string
+): ResolvedProvider {
+  return resolveProviderFromConfig(loadConfig(), providerId, apiKey, model);
 }

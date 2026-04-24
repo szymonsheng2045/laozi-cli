@@ -99,6 +99,7 @@ export class HttpProvider implements Provider {
   async healthCheck(): Promise<boolean> {
     // Some providers (e.g. Aliyun DashScope coding plan) do not expose /models endpoint.
     // Fall back to a lightweight chat completion probe.
+    // Note: qwen3.5-plus can be very slow (>8s even for a tiny probe), so use a generous timeout.
     try {
       const res = await fetch(`${this.meta.baseURL}/models`, {
         method: "GET",
@@ -117,7 +118,7 @@ export class HttpProvider implements Provider {
             "Content-Type": "application/json",
             Authorization: `Bearer ${this.apiKey}`,
           },
-          signal: AbortSignal.timeout(8000),
+          signal: AbortSignal.timeout(25000),
           body: JSON.stringify({
             model: this.model,
             messages: [{ role: "user", content: "hi" }],

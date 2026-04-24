@@ -7,7 +7,7 @@ const FACT_CHECK_TRIGGERS = [
   /新冠|疫情|病毒|流感|疫苗|病例/,
   /地震|洪水|台风|火灾|爆炸|事故|灾难/,
   /新政策|新规定|国家宣布|政府通知|社保|医保|养老金/,
-  /去世了|死了|猝逝|离世|讥告/,
+  /去世了|死了|猝逝|离世|讣告/,
   /最新研究|最新发现|刚刚公布|紧急通知/,
   /某某说|某专家说|网传| reportedly/,
   /涨价|降价|免费|补贴|发放|领取/,
@@ -87,7 +87,7 @@ import type { AnalysisResult } from "./types.js";
 
 /**
  * 基于搜索结果直接生成判定，避免 fallback 到规则引擎时信息丢失。
- * - 权威媒体 ≥2 → safe 92分
+ * - 权威媒体 ≥2 → needs-verification 78分（搜索可作为参考，但不足以直接判真）
  * - 有搜索结果但无权威来源 → 70分，提示"网上有讨论但无法确认"
  * - 无搜索结果 → null（走规则引擎）
  */
@@ -97,24 +97,29 @@ export function buildSearchBasedResult(
 ): AnalysisResult | null {
   if (!factCheck.needed) return null;
 
-  // 权威媒体 ≥2 → 直接 safe
+  // 搜索结果只能提供背景证据，不能替代最终判定。
   if (factCheck.authorityCount >= 2) {
     const sourcesText = factCheck.authoritySources.join("、");
     return {
-      credibilityScore: 92,
-      verdict: "safe",
-      redFlags: [],
+      credibilityScore: 78,
+      verdict: "needs-verification",
+      redFlags: [
+        {
+          zh: `有 ${sourcesText} 等权威来源在报道相关话题，但仅凭搜索结果还不能直接确认转发内容的细节`,
+          en: `Authoritative outlets including ${sourcesText} discuss the topic, but search results alone cannot verify the forwarded claim in full.`,
+        },
+      ],
       elderExplanation: {
-        zh: `这是真实的新闻，${sourcesText} 都有报道，可以放心看。`,
-        en: `This is real news reported by ${sourcesText}. Safe to read.`,
+        zh: `这件事网上有比较可靠的报道，但你转来的这段话有没有添油加醋，还得再核实一下。`,
+        en: `Reliable outlets are covering this topic, but we still need to verify whether the forwarded wording adds or distorts details.`,
       },
       actionSuggestion: {
-        zh: "内容属实，可以放心阅读和转发。",
-        en: "Content is verified. Safe to read and share.",
+        zh: "优先查看原始报道或官方通报，再决定是否转发。",
+        en: "Check the original report or official notice before sharing.",
       },
       summary: {
-        zh: `经 ${sourcesText} 等多家权威媒体确认，该消息属实。`,
-        en: `Confirmed by authoritative media including ${sourcesText}.`,
+        zh: `权威媒体报道过相关话题，但搜索结果本身不足以直接判定转发内容完全属实。`,
+        en: `Authoritative outlets cover the topic, but search results alone are not enough to mark the forwarded content as true.`,
       },
     };
   }

@@ -1268,11 +1268,11 @@ export class RuleBasedProvider implements Provider {
     const userContent = messages.find((m) => m.role === "user")?.content || "";
     const content = userContent.replace(/---/g, "").trim();
 
-    // 优先查询本地辟谣知识库
+    // 优先查询本地辟谣知识库 - 直接匹配（阈值0.7）
     const directMatch = hasDirectMatch(content);
     if (directMatch.matched && directMatch.entry) {
       const e = directMatch.entry;
-      // 从truth中提取与当前claim相关的段落（合集文章可能包含多条谣言）
+      // 从truth中提取与当前claim最相关的段落（合集文章可能包含多条谣言）
       const truthParagraph = extractRelevantTruth(e.truth, e.claim);
       const truth = truthParagraph.length > 150 ? truthParagraph.slice(0, 150) + "..." : truthParagraph;
       return JSON.stringify({
@@ -1280,8 +1280,8 @@ export class RuleBasedProvider implements Provider {
         verdict: "misinformation",
         redFlags: [
           {
-            zh: `该内容已被中国互联网联合辟谣平台辟谣：${e.claim.slice(0, 60)}`,
-            en: `Debunked by China Internet Joint Rumor-Cracking Platform: ${e.claim.slice(0, 60)}`,
+            zh: `该内容已被官方辟谣平台证伪：${e.claim.slice(0, 60)}`,
+            en: `Debunked by official rumor-cracking platform: ${e.claim.slice(0, 60)}`,
           },
         ],
         elderExplanation: {
@@ -1293,8 +1293,38 @@ export class RuleBasedProvider implements Provider {
           en: `Source: ${e.source} (${e.publishDate}). Share the official debunking with family.`,
         },
         summary: {
-          zh: `该内容已被官方辟谣平台证伮：${e.claim.slice(0, 80)}。`,
+          zh: `该内容已被官方辟谣平台证伪：${e.claim.slice(0, 80)}。`,
           en: `Officially debunked: ${e.claim.slice(0, 80)}.`,
+        },
+      });
+    }
+
+    // 知识库模糊匹配 - 阈值0.5
+    const fuzzyMatches = searchPiyao(content, 1);
+    if (fuzzyMatches.length > 0) {
+      const e = fuzzyMatches[0];
+      const truthParagraph = extractRelevantTruth(e.truth, content);
+      const truth = truthParagraph.length > 150 ? truthParagraph.slice(0, 150) + "..." : truthParagraph;
+      return JSON.stringify({
+        credibilityScore: 25,
+        verdict: "misinformation",
+        redFlags: [
+          {
+            zh: `知识库匹配到相关辟谣记录：${e.claim.slice(0, 60)}`,
+            en: `Knowledge base matched related debunking record: ${e.claim.slice(0, 60)}`,
+          },
+        ],
+        elderExplanation: {
+          zh: `这可能是假的。${truth}`,
+          en: `This may be false. ${truth}`,
+        },
+        actionSuggestion: {
+          zh: `该辟谣来源：${e.source} (${e.publishDate})，建议核实后再行动。`,
+          en: `Source: ${e.source} (${e.publishDate}). Verify before taking action.`,
+        },
+        summary: {
+          zh: `知识库匹配到相关记录，该内容可能为虚假信息：${e.claim.slice(0, 80)}。`,
+          en: `Knowledge base matched related record; this content may be misinformation: ${e.claim.slice(0, 80)}.`,
         },
       });
     }

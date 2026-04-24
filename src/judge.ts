@@ -128,20 +128,48 @@ export async function runJudge(
   }
 }
 
+const VERDICT_SEVERITY: Record<string, number> = {
+  safe: 0,
+  "needs-verification": 1,
+  suspicious: 2,
+  misinformation: 3,
+  scam: 4,
+};
+
+/** 严格多数门槛：misinformation/scam 需要 > 50% 票数才能通过，否则降级 */
 function countVotes<T extends string>(items: T[]): T {
   const counts = new Map<T, number>();
   for (const item of items) {
     counts.set(item, (counts.get(item) || 0) + 1);
   }
-  let best = items[0];
-  let bestCount = 0;
-  for (const [item, count] of counts.entries()) {
-    if (count > bestCount) {
-      best = item;
-      bestCount = count;
+
+  // 按票数降序、同票时按严重度降序排列
+  const sorted = Array.from(counts.entries()).sort((a, b) => {
+    if (b[1] !== a[1]) return b[1] - a[1];
+    return (VERDICT_SEVERITY[b[0]] || 0) - (VERDICT_SEVERITY[a[0]] || 0);
+  });
+
+  const [best, bestCount] = sorted[0];
+
+  // misinformation / scam 需要严格超过半数
+  const strictThreshold = items.length / 2;
+  if (
+    (best === "misinformation" || best === "scam") &&
+    bestCount <= strictThreshold
+  ) {
+    // 降级：在剩余选项中选票数最高的，同票时选严重度更低的（更不严重的）
+    const remaining = sorted.slice(1).filter(([v]) => v !== "misinformation" && v !== "scam");
+    if (remaining.length > 0) {
+      remaining.sort((a, b) => {
+        if (b[1] !== a[1]) return b[1] - a[1];
+        return (VERDICT_SEVERITY[a[0]] || 0) - (VERDICT_SEVERITY[b[0]] || 0);
+      });
+      return remaining[0][0] as T;
     }
+    // 如果全部投的 misinformation/scam，即便不满足严格多数也尊重
   }
-  return best;
+
+  return best as T;
 }
 
 function trimmedMean(scores: number[]): number {
@@ -178,6 +206,21 @@ function dedupeFlags(
   return out;
 }
 
+function pickBestField(
+  votes: AnalysisResult[],
+  targetVerdict: AnalysisResult["verdict"],
+  getter: (v: AnalysisResult) => { zh: string; en: string }
+): { zh: string; en: string } {
+  const matching = votes.filter((v) => v.verdict === targetVerdict);
+  const pool = matching.length > 0 ? matching : votes;
+  const bestVote = pool.reduce((best, v) => {
+    const curr = getter(v);
+    const bestVal = getter(best);
+    return curr.zh.length > bestVal.zh.length ? v : best;
+  });
+  return getter(bestVote);
+}
+
 export function ensemble(votes: AnalysisResult[]): AnalysisResult {
   if (votes.length === 0) {
     throw new Error("No judge votes to ensemble");
@@ -190,24 +233,16 @@ export function ensemble(votes: AnalysisResult[]): AnalysisResult {
   const verdict = countVotes(votes.map((v) => v.verdict)) as AnalysisResult["verdict"];
   const redFlags = dedupeFlags(votes.flatMap((v) => v.redFlags));
 
-  const bestElder = votes.reduce((best, v) =>
-    v.elderExplanation.zh.length > best.elderExplanation.zh.length ? v : best
-  );
-
-  const bestAction = votes.reduce((best, v) =>
-    v.actionSuggestion.zh.length > best.actionSuggestion.zh.length ? v : best
-  );
-
-  const bestSummary = votes.reduce((best, v) =>
-    v.summary.zh.length > best.summary.zh.length ? v : best
-  );
+  const bestElder = pickBestField(votes, verdict, (v) => v.elderExplanation);
+  const bestAction = pickBestField(votes, verdict, (v) => v.actionSuggestion);
+  const bestSummary = pickBestField(votes, verdict, (v) => v.summary);
 
   return {
     credibilityScore: score,
     verdict,
     redFlags,
-    elderExplanation: bestElder.elderExplanation,
-    actionSuggestion: bestAction.actionSuggestion,
-    summary: bestSummary.summary,
+    elderExplanation: bestElder,
+    actionSuggestion: bestAction,
+    summary: bestSummary,
   };
 }

@@ -7,7 +7,7 @@ import { analyzeContent } from "./analyzer.js";
 import type { AnalysisResult } from "./types.js";
 import { createProvider, Provider } from "./providers/base.js";
 import { listProviders } from "./providers/registry.js";
-import { loadConfig, saveConfig, configPathDisplay } from "./config.js";
+import { loadConfig, saveConfig, configPathDisplay, getRedactedConfig } from "./config.js";
 import { printError, printInfo, printResult, printFactCheck, printStage, printModelProgress } from "./printer.js";
 import { transcribeAudio } from "./transcribe.js";
 import { clearHistory, formatHistoryPreview, loadHistory, saveHistoryEntry } from "./history.js";
@@ -33,12 +33,13 @@ async function getProvider() {
     provider: resolved.meta.id,
     apiKey: resolved.apiKey,
     model: resolved.model,
+    baseURL: resolved.meta.baseURL,
   });
 
   if (provider.healthCheck) {
     const ok = await provider.healthCheck();
     if (!ok) {
-      printError(
+      throw new Error(
         `${provider.name} 服务未运行或无法连接。\n` +
           (resolved.meta.id === "ollama"
             ? "请确保 Ollama 已安装并运行: https://ollama.com"
@@ -46,7 +47,6 @@ async function getProvider() {
             ? "请确保 llama.cpp server 已启动在 " + resolved.meta.baseURL
             : "请检查网络连接和 API 配置。")
       );
-      process.exit(1);
     }
   }
 
@@ -61,12 +61,12 @@ program
   .option("--panel", "启用多模型委员会并行分析")
   .option("--no-panel", "禁用多模型委员会，使用单模型")
   .option("--debug-panel", "调试模式：显示各模型独立输出")
-  .action(async (text: string, options: { lang: string; panel?: boolean; noPanel?: boolean; debugPanel?: boolean }) => {
+  .action(async (text: string, options: { lang: string; panel?: boolean; debugPanel?: boolean }) => {
     const config = loadConfig();
     // --panel forces panel on; --no-panel forces panel off; default follows config
-    const usePanel = options.panel !== false && (options.panel === true || config.judgePanel.length > 0);
+    const usePanel = options.panel === false ? false : options.panel === true || config.judgePanel.length > 0;
 
-    // Step 1: Fact-check layer (skip in panel mode to save budget for model judges)
+    // Step 1: Fact-check layer
     let factCheck = {
       needed: false as boolean,
       query: "",
@@ -78,7 +78,7 @@ program
       localContext: "" as string,
     };
 
-    // 即使 panel 模式也检索本地辟谣知识库（纯本地计算，不消耗 API 预算）
+    // 检索本地辟谣知识库（纯本地计算，不消耗 API 预算）
     const localMatches = searchPiyao(text, 3);
     if (localMatches.length > 0) {
       factCheck.localMatches = localMatches.map(m => ({
@@ -89,6 +89,28 @@ program
         publishDate: m.publishDate,
       }));
       factCheck.localContext = formatPiyaoMatches(localMatches);
+    }
+
+    // Panel 模式下也执行网络搜索：权威媒体命中可直接返回 safe，反而节省模型 API 预算
+    if (usePanel) {
+      try {
+        const webFactCheck = await runFactCheck(text);
+        factCheck.needed = webFactCheck.needed;
+        factCheck.query = webFactCheck.query;
+        factCheck.results = webFactCheck.results;
+        factCheck.summary = webFactCheck.summary;
+        factCheck.authorityCount = webFactCheck.authorityCount;
+        factCheck.authoritySources = webFactCheck.authoritySources;
+        if (webFactCheck.localMatches) {
+          factCheck.localMatches = webFactCheck.localMatches;
+        }
+        if (webFactCheck.localContext) {
+          factCheck.localContext = webFactCheck.localContext;
+        }
+
+      } catch {
+        // 搜索失败不影响主流程
+      }
     }
 
     if (usePanel) {
@@ -123,6 +145,7 @@ program
             provider: resolved.meta.id,
             apiKey: resolved.apiKey,
             model: resolved.model,
+            baseURL: resolved.meta.baseURL,
           });
           extraction = await extractStructured(provider, text, 18000);
           firstProvider = provider;
@@ -182,7 +205,7 @@ program
           const readline = await import("node:readline");
           const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
           const ask = (q: string): Promise<string> =>
-            new Promise((resolve) => rl.question(`  ${q} `, (a: string) => resolve(a.trim())));
+            new Promise((resolve) => rl.question(`\n  ${q} `, (a: string) => resolve(a.trim())));
 
           const answers: string[] = [];
           for (const q of questions) {
@@ -206,7 +229,14 @@ program
         for (const id of panelIds) {
           try {
             const resolved = resolveProvider(id);
-            providers.push(createProvider({ provider: resolved.meta.id, apiKey: resolved.apiKey, model: resolved.model }));
+            providers.push(
+              createProvider({
+                provider: resolved.meta.id,
+                apiKey: resolved.apiKey,
+                model: resolved.model,
+                baseURL: resolved.meta.baseURL,
+              })
+            );
           } catch {
             console.log(`  ${chalk.yellow("⚠")} ${id.padEnd(18)} 配置缺失，跳过`);
           }
@@ -236,10 +266,14 @@ program
           }
         });
 
-        await Promise.race([
-          Promise.all(judgePromises),
-          new Promise<void>((resolve) => setTimeout(() => resolve(), PANEL_TIMEOUT_MS))
-        ]);
+        // Race: 所有 judge 完成后继续，或超时后继续。清除 dangling timer 避免资源泄漏。
+        let raceTimeout: ReturnType<typeof setTimeout>;
+        const timeoutPromise = new Promise<void>((resolve) => {
+          raceTimeout = setTimeout(() => resolve(), PANEL_TIMEOUT_MS);
+        });
+
+        await Promise.race([Promise.all(judgePromises), timeoutPromise]);
+        clearTimeout(raceTimeout!);
 
         // Redraw final status
         console.log("");
@@ -378,10 +412,10 @@ program
   .option("-l, --lang <lang>", "输出语言: zh | en | bilingual", "bilingual")
   .option("--panel", "启用多模型委员会并行分析")
   .option("--no-panel", "禁用多模型委员会，使用单模型")
-  .action(async (filepath: string, options: { lang: string; panel?: boolean; noPanel?: boolean }) => {
+  .action(async (filepath: string, options: { lang: string; panel?: boolean }) => {
     const config = loadConfig();
     // --panel forces panel on; --no-panel forces panel off; default follows config
-    const usePanel = options.panel !== false && (options.panel === true || config.judgePanel.length > 0);
+    const usePanel = options.panel === false ? false : options.panel === true || config.judgePanel.length > 0;
 
     if (!existsSync(filepath)) {
       printError(`文件不存在: ${filepath}`);
@@ -426,10 +460,11 @@ program
         process.exit(1);
       }
 
-      // 检索本地辟谣知识库（纯本地计算）
+      // 检索本地辟谣知识库 + 网络搜索（结果复用，避免重复调用）
       let voiceLocalContext: string | undefined;
+      let voiceFactCheck: import("./types.js").FactCheckContext | undefined;
       try {
-        const voiceFactCheck = await runFactCheck(transcript);
+        voiceFactCheck = await runFactCheck(transcript);
         voiceLocalContext = voiceFactCheck.localContext || undefined;
       } catch {
         // 忽略错误，继续无本地匹配
@@ -445,15 +480,15 @@ program
           provider: firstResolved.meta.id,
           apiKey: firstResolved.apiKey,
           model: firstResolved.model,
+          baseURL: firstResolved.meta.baseURL,
         });
         extraction = await extractStructured(firstProvider, transcript);
       } catch (extractErr: unknown) {
         const msg = extractErr instanceof Error ? extractErr.message : String(extractErr);
         printError(`结构化提取失败: ${msg}`);
 
-        // voice 命令 fallback：也尝试用搜索结果做判定
-        try {
-          const voiceFactCheck = await runFactCheck(transcript);
+        // voice 命令 fallback：复用之前搜索结果做判定
+        if (voiceFactCheck) {
           const searchResult = buildSearchBasedResult(voiceFactCheck, options.lang || config.language);
           if (searchResult) {
             printResult(searchResult, options.lang || config.language);
@@ -466,8 +501,6 @@ program
             });
             process.exit(0);
           }
-        } catch {
-          // 搜索也失败了，继续 fallback 到规则引擎
         }
 
         printInfo("正在 fallback 到本地规则引擎...");
@@ -500,7 +533,7 @@ program
           const readline = await import("node:readline");
           const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
           const ask = (q: string): Promise<string> =>
-            new Promise((resolve) => rl.question(`  ${q} `, (a: string) => resolve(a.trim())));
+            new Promise((resolve) => rl.question(`\n  ${q} `, (a: string) => resolve(a.trim())));
 
           const answers: string[] = [];
           for (const q of questions) {
@@ -518,7 +551,14 @@ program
       for (const id of panelIds) {
         try {
           const resolved = resolveProvider(id);
-          providers.push(createProvider({ provider: resolved.meta.id, apiKey: resolved.apiKey, model: resolved.model }));
+          providers.push(
+            createProvider({
+              provider: resolved.meta.id,
+              apiKey: resolved.apiKey,
+              model: resolved.model,
+              baseURL: resolved.meta.baseURL,
+            })
+          );
         } catch {
           console.log(`  ${chalk.yellow("⚠")} ${id.padEnd(18)} 配置缺失，跳过`);
         }
@@ -656,7 +696,7 @@ program
 
     if (Object.keys(updates).length === 0) {
       printInfo(`当前配置文件: ${configPathDisplay()}`);
-      console.log(JSON.stringify(loadConfig(), null, 2));
+      console.log(JSON.stringify(getRedactedConfig(loadConfig()), null, 2));
       return;
     }
 

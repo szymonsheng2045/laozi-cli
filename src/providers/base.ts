@@ -17,6 +17,7 @@ export function createProvider(config: {
   provider: string;
   apiKey?: string;
   model: string;
+  baseURL?: string;
 }): Provider {
   if (config.provider === "rule-based") {
     return new RuleBasedProvider();
@@ -27,13 +28,18 @@ export function createProvider(config: {
     throw new Error(`Unknown provider: ${config.provider}`);
   }
 
-  if (meta.type === "anthropic") {
+  const resolvedMeta =
+    config.baseURL && config.baseURL !== meta.baseURL
+      ? { ...meta, baseURL: config.baseURL }
+      : meta;
+
+  if (resolvedMeta.type === "anthropic") {
     // Anthropic native SDK can be added later; for now fall back to HTTP if possible
     throw new Error(
-      `Provider "${meta.name}" is not yet supported in this version. ` +
+      `Provider "${resolvedMeta.name}" is not yet supported in this version. ` +
         `Please use an OpenAI-compatible provider like qwen, kimi, or deepseek.`
     );
   }
 
-  return new HttpProvider(meta, config.apiKey || "", config.model);
+  return new HttpProvider(resolvedMeta, config.apiKey || "", config.model);
 }
