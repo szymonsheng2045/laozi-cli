@@ -45,6 +45,16 @@ npm run build
 npm link
 ```
 
+### Update an existing Windows install
+
+```powershell
+cd $HOME\.laozi-cli
+git pull origin main
+npm install
+npm run build
+npm link
+```
+
 ## Quick Start (Zero Config)
 
 LAOZI.CLI works **out of the box** with a built-in local rule engine. No API key, no model download, no internet required for text analysis.
@@ -84,6 +94,20 @@ laozi config --provider openai --api-key <YOUR_KEY> --base-url https://api.opena
 ```
 
 Other compatible services: DeepSeek, Moonshot (Kimi), Qwen, etc.
+
+### Optional: Four-model judge panel via Bailian
+
+If you have an Alibaba Cloud Bailian / DashScope-compatible key, one key can route the default China-mainland panel:
+
+```bash
+laozi config --key qwen:<DASHSCOPE_API_KEY>
+laozi config --key kimi:<DASHSCOPE_API_KEY>
+laozi config --key zhipu:<DASHSCOPE_API_KEY>
+laozi config --key minimax:<DASHSCOPE_API_KEY>
+laozi config --judge-panel qwen,kimi,zhipu,minimax
+```
+
+The panel keeps each provider's default model (`qwen3.5-plus`, `kimi-k2.5`, `glm-5`, `MiniMax-M2.5`) and then merges the votes with the built-in judge ensemble.
 
 ### API Key Safety
 
