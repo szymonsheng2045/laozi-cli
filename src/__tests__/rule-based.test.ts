@@ -32,6 +32,12 @@ describe("rule-based provider", () => {
     expect(result.credibilityScore).toBe(70);
   });
 
+  it("does not use unrelated debunking records for entertainment release claims", async () => {
+    const result = await analyze("权力的游戏最新一季今年秋天回归！");
+    expect(result.verdict).toBe("needs-verification");
+    expect(result.summary.zh).not.toContain("冒充辅警");
+  });
+
   it("returns needs-verification for unknown claims", async () => {
     const result = await analyze("听说最近有一种新发现可以治百病");
     expect(result.verdict).toBe("needs-verification");

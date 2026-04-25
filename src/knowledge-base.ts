@@ -21,7 +21,15 @@ function loadPiyaoEntries(): PiyaoEntry[] {
   if (piyaoEntries) return piyaoEntries;
   try {
     const raw = readFileSync(join(DATA_DIR, "piyao-entries.json"), "utf-8");
-    piyaoEntries = JSON.parse(raw) as PiyaoEntry[];
+    const parsed = JSON.parse(raw) as Partial<PiyaoEntry>[];
+    piyaoEntries = parsed.map((entry) => ({
+      title: entry.title || entry.claim || "",
+      claim: entry.claim || entry.title || "",
+      truth: entry.truth || "",
+      sourceUrl: entry.sourceUrl || "",
+      publishDate: entry.publishDate || "日期不详",
+      source: entry.source || entry.sourceUrl || "本地辟谣知识库",
+    }));
   } catch {
     piyaoEntries = [];
   }
@@ -37,7 +45,8 @@ const STOP_WORDS = new Set([
   "并且", "不仅", "而且", "只要", "只有", "无论", "不管", "即使", "尽管", "然而", "从而", "进而", "反而", "另外", "此外", "同时", "其次",
   "最后", "首先", "总之", "综上所述", "据此", "据了解", "报道称", "表示", "认为", "指出", "强调", "介绍", "称", "该", "此", "本", "各", "每", "某",
   "听说", "网传", "有人", "记得", "看到", "朋友", "家里", "老人", "群里", "是真", "是假", "真的", "假的",
-  "明天", "今天", "昨天", "前天", "日子", "时候", "时间", "一下", "一点", "一些",
+  "明天", "今天", "昨天", "前天", "今年", "去年", "明年", "最新", "一季", "秋天", "春天", "夏天", "冬天",
+  "回归", "播出", "上映", "发布", "日子", "时候", "时间", "一下", "一点", "一些",
 ]);
 
 function buildDictionary(entries: PiyaoEntry[]): Set<string> {
@@ -129,28 +138,102 @@ function segmentWithDict(text: string, dict: Set<string>): string[] {
   return words;
 }
 
-// 高风险关键词：短 query 中至少命中一个才值得查知识库
-const RISK_KEYWORDS = new Set([
+// 只有进入这些场景时，才值得用辟谣库做模糊召回。辟谣库是“证伪资料库”，
+// 对娱乐/一般资讯类输入强行召回，宁可少命中，也不能错判为已辟谣。
+const CONCRETE_KB_TOPICS = new Set([
   "贷款", "催收", "征信", "逾期", "短信", "链接", "还款", "诈骗",
   "保险", "医保", "社保", "养老金", "退税", "补贴", "骗局",
-  "致癌", "排毒", "养生", "保健品", "偏方", "软化血管", "血管",
+  "致癌", "排毒", "养生", "保健品", "偏方", "软化血管", "血管", "醋", "喝醋",
   "疫苗", "核辐射", "转基因", "味精", "隔夜菜", "微波炉", "银饰",
   "淋巴", "拍打", "洋葱", "宿便", "百塞", "登月",
   "新冠", "疫情", "核酸", "检测", "阴性", "阳性", "隔离",
-  "中奖", "红包", "免费", "抽奖", "幸运", "紧急", "通知", "删除",
-  "政府", "国家", "政策", "秘密", "内幕", "股票", "收益", "投资",
-  "快递", "包裹", "到达", "异常", "点击", "确认", "地址",
-  "漂白", "放血", "泥鳅", "磁疗", "磁铁", "磁石",
-  "生姜", "脚底", "韭菜", "壮阳", "芹菜", "降压", "绿豆汤",
-  "方便面", "千滚水", "亚硝酸盐", "猪油", "植物油",
-  "不孕不育", "有害", "食物相克", "螃蟹", "柿子",
-  "红糖", "痛经", "喝茶", "解酒", "喝醉", "眼镜", "近视", "度数",
-  "白头发", "摇晃", "婴儿", "脑瘫", "天线宝宝", "洗脑",
-  "月球", "背面", "外星人", "基地", "艾滋病", "军方",
-  "板蓝根", "双黄连", "吸烟", "预防", "抢盐", "辐射", "碘盐", "海带",
-  "生吃", "茄子", "治百病", "张悟本", "5G", "基站", "地平",
-  "摄影棚", "911", "自导自演", "罚款", " Gluten", " gluten",
+  "中奖", "红包", "免费", "抽奖", "幸运", "删除",
+  "股票", "收益", "投资", "快递", "包裹", "到达", "异常", "点击", "确认", "地址",
+  "漂白", "放血", "泥鳅", "磁疗", "磁铁", "磁石", "生姜", "脚底",
+  "壮阳", "降压", "亚硝酸盐", "不孕不育", "有害", "食物相克",
+  "近视", "脑瘫", "月球", "外星人", "基地", "艾滋病", "军方",
+  "板蓝根", "双黄连", "抢盐", "辐射", "碘盐", "5G", "基站",
+  "摄影棚", "自导自演", "罚款", "地震", "封城", "打仗", "降准",
 ]);
+
+const PUBLIC_AFFAIRS_TOPICS = new Set([
+  "政府", "国家", "政策", "通知", "秘密", "内幕", "官方", "公安", "警方", "教育部", "央行",
+]);
+
+const STRONG_RUMOR_CONTEXT = [
+  /网传/,
+  /传言/,
+  /辟谣/,
+  /谣言/,
+  /群里/,
+  /朋友圈/,
+  /转发/,
+  /紧急通知/,
+  /官方通知/,
+  /不转不是/,
+  /扩散/,
+  /大家注意/,
+  /央视曝光/,
+  /专家说/,
+  /警惕/,
+  /别信/,
+];
+
+const LOW_SIGNAL_KB_TOKENS = new Set([
+  "今年", "去年", "明年", "最新", "一季", "秋天", "春天", "夏天", "冬天",
+  "回归", "播出", "上映", "发布", "发现", "怎么", "为什么", "近期", "现在",
+]);
+
+function hasAnyTopic(text: string, tokens: string[], topics: Set<string>): boolean {
+  return tokens.some(t => topics.has(t)) || Array.from(topics).some(t => text.includes(t.toLowerCase()));
+}
+
+function getQueryTopics(query: string, qTokens: string[]): string[] {
+  const text = query.toLowerCase();
+  const topics = new Set<string>();
+  for (const t of qTokens) {
+    if (CONCRETE_KB_TOPICS.has(t) || PUBLIC_AFFAIRS_TOPICS.has(t)) topics.add(t.toLowerCase());
+  }
+  for (const t of [...CONCRETE_KB_TOPICS, ...PUBLIC_AFFAIRS_TOPICS]) {
+    if (text.includes(t.toLowerCase())) topics.add(t.toLowerCase());
+  }
+  return Array.from(topics);
+}
+
+function entryTitleText(entry: PiyaoEntry): string {
+  return `${entry.title} ${entry.claim}`.toLowerCase();
+}
+
+function entryContainsTopic(entry: PiyaoEntry, topics: string[]): boolean {
+  return countEntryTopicHits(entry, topics) > 0;
+}
+
+function countEntryTopicHits(entry: PiyaoEntry, topics: string[]): number {
+  if (topics.length === 0) return 0;
+  const text = entryTitleText(entry);
+  return topics.reduce((count, topic) => count + (text.includes(topic) ? 1 : 0), 0);
+}
+
+function normalizedChineseText(text: string): string {
+  return text.toLowerCase().replace(/[^\u4e00-\u9fff0-9a-z]+/g, "");
+}
+
+function hasExactClaimOverlap(query: string, entry: PiyaoEntry): boolean {
+  const q = normalizedChineseText(query);
+  const claim = normalizedChineseText(entry.claim);
+  if (q.length < 8 || claim.length < 8) return false;
+  return q.includes(claim) || claim.includes(q);
+}
+
+function hasKnowledgeBaseSearchSignal(query: string, qTokens: string[]): boolean {
+  const text = query.toLowerCase();
+  const concreteTopic = hasAnyTopic(text, qTokens, CONCRETE_KB_TOPICS);
+  if (concreteTopic) return true;
+
+  const rumorContext = STRONG_RUMOR_CONTEXT.some(pattern => pattern.test(query));
+  const publicAffairsTopic = hasAnyTopic(text, qTokens, PUBLIC_AFFAIRS_TOPICS);
+  return rumorContext && publicAffairsTopic;
+}
 
 /* ── 关键词匹配检索 ────────────────────────────────── */
 
@@ -212,6 +295,7 @@ function extractKeywords(text: string): { word: string; weight: number }[] {
   const seen = new Map<string, number>();
   for (const { word, weight } of words) {
     if (STOP_WORDS.has(word)) continue;
+    if (LOW_SIGNAL_KB_TOKENS.has(word)) continue;
     seen.set(word, Math.max(seen.get(word) || 0, weight));
   }
 
@@ -300,17 +384,20 @@ export function searchPiyao(query: string, topK: number = 3): PiyaoEntry[] {
   if (qTokens.length === 0) return [];
   if (qTokens.length < 2) return [];
 
-  // 短日常 query（如"明天下雨，记得带伞"）无风险关键词时跳过知识库匹配
-  const hasRiskToken = qTokens.some(t => RISK_KEYWORDS.has(t));
-  const hasLongToken = qTokens.some(t => t.length >= 3);
-  if (query.length < 15 && qTokens.length < 3 && !hasRiskToken && !hasLongToken) {
+  // 日常/娱乐/一般资讯类 query 不适合用辟谣库模糊召回，避免低相关误报。
+  if (!hasKnowledgeBaseSearchSignal(query, qTokens)) {
     return [];
   }
 
+  const queryTopics = getQueryTopics(query, qTokens);
   const scored = entries
-    .map(e => ({ entry: e, score: scoreMatch(query, e, dict, entries) }))
-    .filter(s => s.score >= 0.35)
-    .sort((a, b) => b.score - a.score)
+    .map(e => ({
+      entry: e,
+      score: scoreMatch(query, e, dict, entries),
+      topicHits: countEntryTopicHits(e, queryTopics),
+    }))
+    .filter(s => s.score >= 0.42 && s.topicHits > 0)
+    .sort((a, b) => b.topicHits - a.topicHits || b.score - a.score)
     .slice(0, topK);
 
   return scored.map(s => s.entry);
@@ -343,8 +430,16 @@ export function hasDirectMatch(query: string): { matched: boolean; entry?: Piyao
   const queryTokens = segmentWithDict(query, dict);
   if (queryTokens.length < 3) return { matched: false };
 
+  const hasSearchSignal = hasKnowledgeBaseSearchSignal(query, queryTokens);
+  const threshold = hasSearchSignal ? 0.68 : 0.82;
+  const queryTopics = getQueryTopics(query, queryTokens);
+
   for (const e of entries) {
-    if (scoreMatch(query, e, dict, entries) >= 0.6) {
+    const score = scoreMatch(query, e, dict, entries);
+    if (hasExactClaimOverlap(query, e) && score >= 0.55) {
+      return { matched: true, entry: e };
+    }
+    if (entryContainsTopic(e, queryTopics) && score >= threshold) {
       return { matched: true, entry: e };
     }
   }
