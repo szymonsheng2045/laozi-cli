@@ -21,6 +21,7 @@ import { extractStructured, Extraction } from "./extractor.js";
 import { buildQuestions, Question } from "./questioner.js";
 
 const program = new Command();
+const BAILIAN_PANEL = ["qwen", "kimi", "zhipu", "minimax"] as const;
 
 program
   .name("laozi")
@@ -658,6 +659,8 @@ program
   .option("--provider <name>", "模型提供者: rule-based, qwen, kimi, deepseek, zhipu, minimax, openai, anthropic, gemini, ollama, llama-cpp")
   .option("--api-key <key>", "设置全局 API Key")
   .option("--key <provider:key>", "设置指定 provider 的 API Key，格式: qwen:sk-xxx")
+  .option("--bailian-key <key>", "一键配置阿里云百炼四模型委员会 API Key")
+  .option("--dashscope-key <key>", "同 --bailian-key，兼容 DashScope 命名")
   .option("--base-url <url>", "设置 API Base URL")
   .option("--model <model>", "设置分析用模型")
   .option("--whisper-model <model>", "设置语音转文字模型")
@@ -679,6 +682,19 @@ program
         .filter(Boolean);
     }
     if (options.tavilyApiKey !== undefined) updates.tavilyApiKey = options.tavilyApiKey;
+
+    const bailianKey = options.bailianKey || options.dashscopeKey;
+    if (bailianKey !== undefined) {
+      const current = loadConfig();
+      updates.provider = "qwen";
+      updates.model = "local-rules";
+      updates.baseURL = "";
+      updates.judgePanel = [...BAILIAN_PANEL];
+      updates.keys = {
+        ...current.keys,
+        ...Object.fromEntries(BAILIAN_PANEL.map((providerId) => [providerId, bailianKey])),
+      };
+    }
 
     // Provider-specific key: --key qwen:sk-xxx
     if (options.key !== undefined) {
@@ -702,6 +718,48 @@ program
 
     saveConfig(updates);
     printInfo(`配置已保存到: ${configPathDisplay()}`);
+    if (bailianKey !== undefined) {
+      printInfo("已启用百炼四模型委员会: qwen,kimi,zhipu,minimax");
+    }
+  });
+
+program
+  .command("doctor")
+  .description("诊断安装、配置和多模型委员会状态")
+  .action(() => {
+    const config = loadConfig();
+    const redacted = getRedactedConfig(config);
+    const panelIds = config.judgePanel || [];
+    const panelEnabled = panelIds.length > 0;
+
+    console.log("\nLAOZI.CLI Doctor\n");
+    console.log(`  Platform: ${process.platform} ${process.arch}`);
+    console.log(`  Node.js:  ${process.version}`);
+    console.log(`  Config:   ${configPathDisplay()}`);
+    console.log(`  Provider: ${config.provider}`);
+    console.log(`  Model:    ${config.model}`);
+    console.log(`  Language: ${config.language}`);
+    console.log(`  Panel:    ${panelEnabled ? panelIds.join(",") : "disabled (local/single-provider mode)"}`);
+
+    if (panelEnabled) {
+      console.log("\n  Panel providers:");
+      for (const id of panelIds) {
+        try {
+          const resolved = resolveProvider(id);
+          const keyLabel = redacted.keys[id] || (redacted.apiKey ? redacted.apiKey : "");
+          console.log(`    ✓ ${id.padEnd(8)} model=${resolved.model} key=${keyLabel || "missing"}`);
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message.split("\n")[0] : String(err);
+          console.log(`    ✗ ${id.padEnd(8)} ${msg}`);
+        }
+      }
+    } else {
+      console.log("\n  当前不会进入“结构化提取 + 多模型裁决”流程。");
+      console.log("  如需启用百炼四模型委员会，请执行：");
+      console.log("    laozi config --bailian-key <DASHSCOPE_API_KEY>");
+    }
+
+    console.log("");
   });
 
 program

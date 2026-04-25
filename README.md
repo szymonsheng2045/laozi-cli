@@ -100,14 +100,18 @@ Other compatible services: DeepSeek, Moonshot (Kimi), Qwen, etc.
 If you have an Alibaba Cloud Bailian / DashScope-compatible key, one key can route the default China-mainland panel:
 
 ```bash
-laozi config --key qwen:<DASHSCOPE_API_KEY>
-laozi config --key kimi:<DASHSCOPE_API_KEY>
-laozi config --key zhipu:<DASHSCOPE_API_KEY>
-laozi config --key minimax:<DASHSCOPE_API_KEY>
-laozi config --judge-panel qwen,kimi,zhipu,minimax
+laozi config --bailian-key <DASHSCOPE_API_KEY>
 ```
 
 The panel keeps each provider's default model (`qwen3.5-plus`, `kimi-k2.5`, `glm-5`, `MiniMax-M2.5`) and then merges the votes with the built-in judge ensemble.
+
+Check whether the panel is actually enabled:
+
+```bash
+laozi doctor
+```
+
+If `doctor` says `Panel: disabled`, LAOZI.CLI is still in local/single-provider mode and will not run the `structured extraction -> multi-model judge` workflow.
 
 ### API Key Safety
 
