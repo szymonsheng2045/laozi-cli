@@ -656,7 +656,7 @@ program
 program
   .command("config")
   .description("配置 CLI 参数")
-  .option("--provider <name>", "模型提供者: rule-based, qwen, kimi, deepseek, zhipu, minimax, openai, anthropic, gemini, ollama, llama-cpp")
+  .option("--provider <name>", "模型提供者: rule-based, laozi-cloud, qwen, kimi, deepseek, zhipu, minimax, openai, anthropic, gemini, ollama, llama-cpp")
   .option("--api-key <key>", "设置全局 API Key")
   .option("--key <provider:key>", "设置指定 provider 的 API Key，格式: qwen:sk-xxx")
   .option("--bailian-key <key>", "一键配置阿里云百炼四模型委员会 API Key")
@@ -753,6 +753,12 @@ program
           console.log(`    ✗ ${id.padEnd(8)} ${msg}`);
         }
       }
+    } else if (config.provider === "laozi-cloud") {
+      console.log("\n  当前会使用 LAOZI Cloud 单模型云分析。");
+      console.log("  注意：待分析文本会发送到 laozi.art；如需完全本地，请执行：");
+      console.log("    laozi config --provider rule-based");
+      console.log("  如需本机直连百炼四模型委员会，请执行：");
+      console.log("    laozi config --bailian-key <DASHSCOPE_API_KEY>");
     } else {
       console.log("\n  当前不会进入“结构化提取 + 多模型裁决”流程。");
       console.log("  如需启用百炼四模型委员会，请执行：");

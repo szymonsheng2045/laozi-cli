@@ -1,7 +1,7 @@
 export interface ProviderMeta {
   id: string;
   name: string;
-  type: "openai" | "anthropic" | "local";
+  type: "openai" | "anthropic" | "local" | "cloud";
   baseURL: string;
   defaultModel: string;
   envKey: string;
@@ -9,6 +9,16 @@ export interface ProviderMeta {
 }
 
 export const PROVIDERS: Record<string, ProviderMeta> = {
+  // LAOZI.CLI hosted analysis service. The API key stays on laozi.art.
+  "laozi-cloud": {
+    id: "laozi-cloud",
+    name: "LAOZI Cloud",
+    type: "cloud",
+    baseURL: "https://laozi.art",
+    defaultModel: "laozi-cloud",
+    envKey: "",
+    region: "global",
+  },
   // 阿里云百炼统一入口（Coding Plan 推荐）
   // 一个 API Key 调用 Qwen / Kimi / GLM / MiniMax 四家模型
   qwen: {

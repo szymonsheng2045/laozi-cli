@@ -48,8 +48,11 @@ export function printBanner() {
   console.log(`${BASE_PAD}  ${chalk.cyan("laozi config")}                配置 API Key 和模型`);
   console.log("");
   console.log(`${BASE_PAD}${chalk.bold("快速开始 / Quick Start:")}`);
-  console.log(`${BASE_PAD}  ${DIM("# 零配置，即用即走（本地规则引擎）")}`);
+  console.log(`${BASE_PAD}  ${DIM("# 零配置，即用即走（默认 LAOZI Cloud）")}`);
   console.log(`${BASE_PAD}  ${chalk.yellow('laozi check "专家说每天喝醋能软化血管"')}`);
+  console.log("");
+  console.log(`${BASE_PAD}  ${DIM("# 完全本地模式（不发送到云端）")}`);
+  console.log(`${BASE_PAD}  ${chalk.yellow("laozi config --provider rule-based")}`);
   console.log("");
   console.log(`${BASE_PAD}  ${DIM("# 升级到本地 AI 模型（Ollama）")}`);
   console.log(`${BASE_PAD}  ${chalk.yellow("laozi config --provider ollama --model qwen2.5:7b")}`);

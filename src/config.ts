@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 export type ProviderId =
   | "rule-based"
+  | "laozi-cloud"
   | "qwen"
   | "kimi"
   | "deepseek"
@@ -33,11 +34,11 @@ const configPath = join(configDir, "config.json");
 
 export const defaultConfig: Config = {
   version: 1,
-  provider: "rule-based",
+  provider: "laozi-cloud",
   apiKey: "",
   keys: {},
   baseURL: "",
-  model: "local-rules",
+  model: "laozi-cloud",
   whisperModel: "whisper-1",
   language: "bilingual",
   judgePanel: [],

@@ -35,4 +35,20 @@ describe("resolveProviderFromConfig", () => {
 
     expect(provider.meta.baseURL).toBe("https://proxy.example/v1");
   });
+
+  it("resolves LAOZI Cloud without a user API key", () => {
+    const resolved = resolveProviderFromConfig(
+      {
+        ...baseConfig,
+        provider: "laozi-cloud",
+        apiKey: "",
+        baseURL: "",
+        model: "laozi-cloud",
+      }
+    );
+
+    expect(resolved.meta.id).toBe("laozi-cloud");
+    expect(resolved.apiKey).toBe("");
+    expect(resolved.meta.baseURL).toBe("https://laozi.art");
+  });
 });

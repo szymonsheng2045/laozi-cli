@@ -53,8 +53,8 @@ export function resolveProviderFromConfig(
     finalKey = process.env[registryMeta.envKey] || "";
   }
 
-  // Local models don't require API keys
-  if (registryMeta.type !== "local" && !finalKey) {
+  // Local models and LAOZI Cloud don't require user-side API keys.
+  if (registryMeta.type !== "local" && registryMeta.type !== "cloud" && !finalKey) {
     const sources = registryMeta.envKey
       ? `config file (keys.${registryMeta.id} or apiKey) or environment variable ${registryMeta.envKey}`
       : "config file";

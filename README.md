@@ -57,15 +57,21 @@ npm link
 
 ## Quick Start (Zero Config)
 
-LAOZI.CLI works **out of the box** with a built-in local rule engine. No API key, no model download, no internet required for text analysis.
+LAOZI.CLI works **out of the box** with LAOZI Cloud. No API key or model download is required.
 
 ```bash
 laozi check "专家说每天喝醋能软化血管，群里都在转发"
 ```
 
+By default, the text you analyze is sent to `https://laozi.art/api/analyze` for cloud analysis. If you want a fully local, no-network mode:
+
+```bash
+laozi config --provider rule-based
+```
+
 ## Upgrade to AI Analysis
 
-The rule engine catches common hoaxes instantly, but for unknown or complex content, you can upgrade to a local or remote AI model:
+The hosted cloud mode is the easiest starting point. You can also switch to a local or self-managed model:
 
 ### Option 1: Local Ollama (Free, Private)
 
@@ -94,6 +100,14 @@ laozi config --provider openai --api-key <YOUR_KEY> --base-url https://api.opena
 ```
 
 Other compatible services: DeepSeek, Moonshot (Kimi), Qwen, etc.
+
+### Option 4: LAOZI Cloud (Default)
+
+```bash
+laozi config --provider laozi-cloud
+```
+
+The API key is kept on the `laozi.art` server. CLI users do not receive or need the key.
 
 ### Optional: Four-model judge panel via Bailian
 

@@ -88,6 +88,9 @@ export async function startREPL() {
   console.log(chalk.hex("#c9a961")("\n欢迎来到 laozi.cli — 输入文字即可分析，输入 /quit 退出\n"));
   if (usePanel) {
     console.log(chalk.gray(`  当前模式：多模型委员会 (${config.judgePanel.join(",")})`));
+  } else if (config.provider === "laozi-cloud") {
+    console.log(chalk.gray("  当前模式：LAOZI Cloud（文本会发送到 laozi.art 云端分析）"));
+    console.log(chalk.gray("  如需完全本地：laozi config --provider rule-based"));
   } else if (config.provider === "rule-based") {
     console.log(chalk.gray("  当前模式：本地规则引擎（不会调用结构化提取/多模型裁决）"));
     console.log(chalk.gray("  启用百炼四模型：laozi config --bailian-key <DASHSCOPE_API_KEY>"));

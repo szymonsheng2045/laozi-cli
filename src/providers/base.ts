@@ -1,5 +1,6 @@
 import { RuleBasedProvider } from "./rule-based.js";
 import { HttpProvider } from "./http-provider.js";
+import { CloudProvider } from "./cloud-provider.js";
 import { getProviderMeta } from "./registry.js";
 
 export interface ChatMessage {
@@ -32,6 +33,10 @@ export function createProvider(config: {
     config.baseURL && config.baseURL !== meta.baseURL
       ? { ...meta, baseURL: config.baseURL }
       : meta;
+
+  if (resolvedMeta.type === "cloud") {
+    return new CloudProvider(resolvedMeta);
+  }
 
   if (resolvedMeta.type === "anthropic") {
     // Anthropic native SDK can be added later; for now fall back to HTTP if possible
